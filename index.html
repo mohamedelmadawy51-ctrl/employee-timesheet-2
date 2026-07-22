@@ -2447,6 +2447,14 @@ function renderFinancialTab(){
         <button class="btn-sm btn-go" onclick="loadFinancialResults()">عرض المستحقات</button>
       </div>
     </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-head"><h3>التقرير الشهري لكل الموظفين (PDF)</h3></div>
+      <div class="panel-body filters">
+        <div class="f-field"><label>من تاريخ</label><input type="date" id="monthly_from" value="${period.from}"></div>
+        <div class="f-field"><label>إلى تاريخ</label><input type="date" id="monthly_to" value="${period.to}"></div>
+        <button class="btn-sm btn-teal" onclick="printMonthlyAllowancesReportPdfFromInputs()">🖨️ تحويل PDF</button>
+      </div>
+    </div>
     <div id="finResultsWrap"></div>
   `;
   loadFinancialResults();
@@ -2682,9 +2690,76 @@ function printFinancialReportPdf(employeeId, from, to){
   setTimeout(()=>{ try{ win.print(); }catch(e){} }, 500);
 }
 
-/* ==========================================================
-   EMPLOYEE: CLOCK IN/OUT
-   ========================================================== */
+function printMonthlyAllowancesReportPdfFromInputs(){
+  const from = document.getElementById('monthly_from').value;
+  const to = document.getElementById('monthly_to').value;
+  if(!from || !to){ alert('من فضلك اختر تاريخ البداية وتاريخ النهاية'); return; }
+  printMonthlyAllowancesReportPdf(from, to);
+}
+
+function printMonthlyAllowancesReportPdf(from, to){
+  const employees = DATA.employees.filter(e=>e.active).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const win = window.open('', '_blank');
+  if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
+
+  let sumTransport=0, sumOt=0, sumIncentive=0, sumTotal=0;
+  const rows = employees.map(emp=>{
+    const f = computePeriodFinancials(emp.id, from, to);
+    const total = f.transportTotal + f.otPay + f.incentiveTotal;
+    sumTransport += f.transportTotal; sumOt += f.otPay; sumIncentive += f.incentiveTotal; sumTotal += total;
+    const avatar = emp.photo
+      ? `<img src="${emp.photo}" class="ph">`
+      : `<div class="ph ph-initial">${escapeHtml((emp.name||'?').trim().charAt(0)||'?')}</div>`;
+    return `<tr>
+      <td class="name-cell">${avatar}<span>${escapeHtml(emp.name)}</span></td>
+      <td class="mono">${fmtMoney(f.transportTotal)}</td>
+      <td class="mono">${fmtMoney(f.otPay)}</td>
+      <td class="mono">${fmtMoney(f.incentiveTotal)}</td>
+      <td class="mono tot">${fmtMoney(total)}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+    <title>التقرير الشهري لمستحقات الموظفين</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+      @page { size: landscape; margin: 12mm; }
+      *{box-sizing:border-box;}
+      body{font-family:'Cairo',Tahoma,Arial,sans-serif;color:#0B2A4A;margin:0;padding:16px;}
+      .head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #003A72;padding-bottom:14px;margin-bottom:16px;}
+      .head img.logo{width:52px;height:52px;border-radius:50%;}
+      .head h1{font-size:19px;margin:0;color:#003A72;}
+      .head .sub{font-size:12.5px;color:#5C6F84;margin-top:2px;}
+      table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px;}
+      th,td{padding:9px 12px;border:1px solid #E3E7EC;text-align:right;vertical-align:middle;}
+      th{background:#003A72;color:#fff;font-size:13px;}
+      tbody tr:nth-child(even) td{background:#F7F9FB;}
+      .mono{font-family:'Cairo',Tahoma,monospace;}
+      .name-cell{display:flex;align-items:center;gap:10px;font-weight:700;}
+      .ph{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;}
+      .ph-initial{display:flex;align-items:center;justify-content:center;background:#003A72;color:#fff;font-weight:800;}
+      .tot{font-weight:800;color:#003A72;}
+      tfoot td{background:#EAF3E3;font-weight:800;border-top:2px solid #6FBD44;font-size:14px;}
+      .footer{margin-top:20px;font-size:11px;color:#8A97A6;text-align:center;}
+      @media print{ body{padding:6px;} thead{display:table-header-group;} }
+    </style></head><body>
+    <div class="head">
+      <img class="logo" src="data:image/png;base64,${LOGO_SMALL_B64}">
+      <div><h1>IFT Corporation — التقرير الشهري لمستحقات الموظفين</h1><div class="sub">الفترة من ${from} إلى ${to}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>اسم الزميل</th><th>مبلغ بدل الانتقالات</th><th>مبلغ ساعات الأوفر تايم</th><th>مبلغ الحافز الشهري</th><th>الإجمالي</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="5" style="text-align:center;">لا يوجد موظفون نشطون</td></tr>`}</tbody>
+      <tfoot><tr><td>الإجمالي العام</td><td class="mono">${fmtMoney(sumTransport)}</td><td class="mono">${fmtMoney(sumOt)}</td><td class="mono">${fmtMoney(sumIncentive)}</td><td class="mono">${fmtMoney(sumTotal)}</td></tr></tfoot>
+    </table>
+    <div class="footer">IFT Corporation — تم إصدار هذا التقرير تلقائيًا من نظام الحضور والانصراف</div>
+  </body></html>`;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ try{ win.print(); }catch(e){} }, 500);
+}
 function renderClockTab(){
   const emp = empById(SESSION.employeeId);
   const open = openEntryFor(emp.id);
