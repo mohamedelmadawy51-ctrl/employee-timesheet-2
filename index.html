@@ -47,6 +47,32 @@ input,select,textarea{font-family:inherit;}
   opacity:.95;
 }
 
+/* ---------- TOAST (punch greeting) ---------- */
+.app-toast{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%) translateY(30px);
+  background:var(--navy);
+  color:var(--text-light);
+  padding:14px 24px;
+  border-radius:14px;
+  font-weight:700;
+  font-size:14.5px;
+  box-shadow:0 16px 40px rgba(0,0,0,.35);
+  z-index:9999;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .3s ease, transform .3s ease;
+  max-width:92vw;
+  text-align:center;
+  border:1px solid rgba(111,189,68,.4);
+}
+.app-toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+
 /* ---------- LOGIN ---------- */
 #login-screen{
   min-height:100vh;
@@ -803,7 +829,10 @@ function computeEntryHours(entry){
   let total = 0;
   if(entry.timeOut){
     let dOut = new Date(entry.date+'T'+entry.timeOut+':00');
-    if(dOut <= dIn) dOut = new Date(dOut.getTime() + 24*3600*1000);
+    // Only treat as an overnight shift (wrap to next day) when timeOut is strictly
+    // earlier than timeIn — e.g. in 22:00 / out 06:00. If they're equal, the shift
+    // length is 0, not 24h (previously this bug turned a 0h entry into 16h of OT).
+    if(dOut < dIn) dOut = new Date(dOut.getTime() + 24*3600*1000);
     total = (dOut - dIn) / 3600000;
   }
   const limit = DATA.settings.regHoursLimit;
@@ -825,6 +854,71 @@ function transportRateFor(project){
   return rule ? (rule.amount||0) : 0;
 }
 function openEntryFor(employeeId){ return DATA.entries.find(e=>e.employeeId===employeeId && !e.timeOut); }
+
+/* ==========================================================
+   PUNCH META: LOCATION / IP / DEVICE / GREETING
+   ========================================================== */
+function getGeoLocation(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){ resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6), accuracy: Math.round(pos.coords.accuracy||0) }),
+      ()  => resolve(null),
+      { enableHighAccuracy:true, timeout:8000, maximumAge:60000 }
+    );
+  });
+}
+async function getPublicIp(){
+  try{
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    return data && data.ip ? data.ip : null;
+  }catch(e){ return null; }
+}
+function getDeviceInfo(){
+  const ua = navigator.userAgent || '';
+  let os = 'غير معروف';
+  if(/Windows/i.test(ua)) os = 'Windows';
+  else if(/Android/i.test(ua)) os = 'Android';
+  else if(/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+  else if(/Macintosh|Mac OS/i.test(ua)) os = 'Mac';
+  else if(/Linux/i.test(ua)) os = 'Linux';
+  let browser = 'متصفح';
+  if(/Edg\//i.test(ua)) browser = 'Edge';
+  else if(/OPR\//i.test(ua)) browser = 'Opera';
+  else if(/Chrome\//i.test(ua) && !/Chromium/i.test(ua)) browser = 'Chrome';
+  else if(/Firefox\//i.test(ua)) browser = 'Firefox';
+  else if(/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+  return `${os} - ${browser}`;
+}
+function mapLink(loc){
+  return loc ? `https://www.google.com/maps?q=${loc.lat},${loc.lng}` : null;
+}
+function greetingFor(name, action){
+  const hour = new Date().getHours();
+  const firstName = (name||'').trim().split(' ')[0] || name;
+  if(action==='in'){
+    if(hour < 12)  return `☀️ صباح الخير يا ${firstName}، تم تسجيل حضورك بنجاح`;
+    if(hour < 17)  return `🌤️ مساء الخير يا ${firstName}، تم تسجيل حضورك بنجاح`;
+    return `🌙 مساء الخير يا ${firstName}، تم تسجيل حضورك بنجاح`;
+  }else{
+    if(hour < 17)  return `👋 إلى اللقاء يا ${firstName}، تم تسجيل انصرافك بنجاح`;
+    return `🌙 تصبح على خير يا ${firstName}، تم تسجيل انصرافك بنجاح`;
+  }
+}
+function showToast(msg){
+  let t = document.getElementById('appToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'appToast';
+    t.className = 'app-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(()=> t.classList.add('show'));
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=> t.classList.remove('show'), 4000);
+}
 
 function monthsBetween(from,to){
   const res=[];
@@ -1976,7 +2070,7 @@ function renderEntriesTable(list, editable){
   return `<table>
     <thead><tr>
       <th>الموظف</th><th>التاريخ</th><th>المشروع/الموقع</th><th>دخول</th><th>خروج</th>
-      <th>ساعات عادية</th><th>أوفر تايم</th><th>إجمالي الأجر</th><th>الحالة</th>${editable?'<th>—</th>':''}
+      <th>ساعات عادية</th><th>أوفر تايم</th><th>إجمالي الأجر</th><th>الحالة</th><th>الموقع/الجهاز</th>${editable?'<th>—</th>':''}
     </tr></thead>
     <tbody>
       ${list.map(e=>{
@@ -1993,6 +2087,7 @@ function renderEntriesTable(list, editable){
           <td class="mono">${fmtHrs(h.ot)}</td>
           <td class="mono">${fmtMoney(p.totalPay)}</td>
           <td>${e.timeOut? '<span class="tag tag-closed">مغلق</span>' : '<span class="tag tag-open">جاري الآن</span>'}</td>
+          <td>${renderLocDeviceCell(e)}</td>
           ${editable? `<td>
             <button class="btn-sm btn-teal" onclick="editEntry(${e.id})">تعديل</button>
             <button class="btn-sm btn-danger" onclick="deleteEntry(${e.id})">حذف</button>
@@ -2001,6 +2096,19 @@ function renderEntriesTable(list, editable){
       }).join('')}
     </tbody>
   </table>`;
+}
+function renderLocDeviceCell(e){
+  const parts = [];
+  const inLink = mapLink(e.locationIn);
+  const outLink = mapLink(e.locationOut);
+  const inTitle = `دخول${e.deviceIn? ' — '+escapeHtml(e.deviceIn):''}${e.ipIn? ' — IP: '+escapeHtml(e.ipIn):''}`;
+  const outTitle = `خروج${e.deviceOut? ' — '+escapeHtml(e.deviceOut):''}${e.ipOut? ' — IP: '+escapeHtml(e.ipOut):''}`;
+  if(inLink) parts.push(`<a href="${inLink}" target="_blank" title="${inTitle}" style="text-decoration:none;">📍دخول</a>`);
+  else if(e.deviceIn || e.ipIn) parts.push(`<span title="${inTitle}">💻دخول</span>`);
+  if(outLink) parts.push(`<a href="${outLink}" target="_blank" title="${outTitle}" style="text-decoration:none;">📍خروج</a>`);
+  else if(e.deviceOut || e.ipOut) parts.push(`<span title="${outTitle}">💻خروج</span>`);
+  if(!parts.length) return '<span style="color:var(--text-dim)">—</span>';
+  return `<div style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;">${parts.join('')}</div>`;
 }
 function renderEntriesTab(){
   const editable = SESSION.role==='admin';
@@ -2048,16 +2156,21 @@ function exportEntriesToExcel(){
   if(from) list = list.filter(e=>e.date>=from);
   if(to) list = list.filter(e=>e.date<=to);
   list.sort((a,b)=> (a.date+a.timeIn).localeCompare(b.date+b.timeIn));
-  const rows = [['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة']];
+  const rows = [['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة','موقع الدخول','موقع الخروج','IP الدخول','IP الخروج','جهاز الدخول','جهاز الخروج']];
   list.forEach(e=>{
     const emp = empById(e.employeeId);
     const h = computeEntryHours(e); const p = computeEntryPay(e);
-    rows.push([emp?emp.name:'غير معروف', emp?emp.type:'', e.date, e.project||'', e.timeIn||'', e.timeOut||'', h.reg, h.ot, p.totalPay, e.timeOut?'مغلق':'جاري الآن']);
+    rows.push([
+      emp?emp.name:'غير معروف', emp?emp.type:'', e.date, e.project||'', e.timeIn||'', e.timeOut||'', h.reg, h.ot, p.totalPay, e.timeOut?'مغلق':'جاري الآن',
+      e.locationIn? `${e.locationIn.lat}, ${e.locationIn.lng}` : '',
+      e.locationOut? `${e.locationOut.lat}, ${e.locationOut.lng}` : '',
+      e.ipIn||'', e.ipOut||'', e.deviceIn||'', e.deviceOut||''
+    ]);
   });
   if(rows.length===1){ alert('لا توجد سجلات لتصديرها بهذه الفلاتر'); return; }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:22},{wch:20},{wch:12},{wch:18},{wch:8},{wch:8},{wch:12},{wch:14},{wch:14},{wch:12}];
+  ws['!cols'] = [{wch:22},{wch:20},{wch:12},{wch:18},{wch:8},{wch:8},{wch:12},{wch:14},{wch:14},{wch:12},{wch:20},{wch:20},{wch:14},{wch:14},{wch:16},{wch:16}];
   XLSX.utils.book_append_sheet(wb, ws, 'سجلات الحضور');
   const stamp = (from||'الكل')+'_'+(to||'الكل');
   XLSX.writeFile(wb, `سجلات_الحضور_${stamp}.xlsx`);
@@ -2093,6 +2206,7 @@ async function saveEntry(id){
   const timeOut = document.getElementById('e_out').value;
   const notes = document.getElementById('e_notes').value.trim();
   if(!employeeId || !date || !timeIn){ alert('من فضلك أكمل الموظف والتاريخ ووقت الدخول'); return; }
+  if(timeOut && timeOut===timeIn){ alert('وقت الدخول والخروج متطابقان — من فضلك تأكد من الوقت الصحيح.'); return; }
   if(id){ Object.assign(DATA.entries.find(x=>x.id===id), {employeeId,date,project,timeIn,timeOut:timeOut||null,notes}); }
   else{ DATA.entries.push({id: nextId(DATA.entries), employeeId,date,project,timeIn,timeOut:timeOut||null,notes}); }
   await saveData(); closeModal(); renderEntriesTab();
@@ -2614,11 +2728,28 @@ function renderMySummary(empId){
 async function handlePunch(){
   const emp = empById(SESSION.employeeId);
   const open = openEntryFor(emp.id);
-  if(open){ open.timeOut = nowTimeStr(); await saveData(); }
-  else{
-    const project = document.getElementById('clockProject').value;
-    DATA.entries.push({ id: nextId(DATA.entries), employeeId: emp.id, date: todayStr(), timeIn: nowTimeStr(), timeOut: null, project, notes:'' });
+  const btn = document.getElementById('punchBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '... جارِ التسجيل'; }
+
+  const [geo, ip] = await Promise.all([ getGeoLocation(), getPublicIp() ]);
+  const device = getDeviceInfo();
+
+  if(open){
+    open.timeOut = nowTimeStr();
+    open.locationOut = geo;
+    open.ipOut = ip;
+    open.deviceOut = device;
     await saveData();
+    showToast(greetingFor(emp.name, 'out'));
+  }else{
+    const project = document.getElementById('clockProject').value;
+    DATA.entries.push({
+      id: nextId(DATA.entries), employeeId: emp.id, date: todayStr(),
+      timeIn: nowTimeStr(), timeOut: null, project, notes:'',
+      locationIn: geo, ipIn: ip, deviceIn: device
+    });
+    await saveData();
+    showToast(greetingFor(emp.name, 'in'));
   }
   renderClockTab();
 }
