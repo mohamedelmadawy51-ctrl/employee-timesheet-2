@@ -529,6 +529,7 @@ tr:hover td{background:#FAFBFC;}
     <div class="login-body">
       <div class="role-tabs">
         <button id="tabAdmin" class="active" onclick="setLoginRole('admin')">مسؤول</button>
+        <button id="tabSecurity" onclick="setLoginRole('security')">أمن</button>
         <button id="tabLead" onclick="setLoginRole('lead')">مدير (Lead)</button>
         <button id="tabSup" onclick="setLoginRole('supervisor')">مشرف وردية</button>
         <button id="tabEmp" onclick="setLoginRole('employee')">موظف</button>
@@ -543,6 +544,19 @@ tr:hover td{background:#FAFBFC;}
         </div>
         <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول كمسؤول</button>
         <div class="login-hint">كلمة المرور الافتراضية: <b class="mono">admin123</b> — يفضّل تغييرها من الإعدادات بعد أول دخول.</div>
+      </div>
+
+      <div id="securityLoginForm" style="display:none;">
+        <div class="field">
+          <label>اسم المستخدم</label>
+          <input type="text" id="securityUserInput" placeholder="username">
+        </div>
+        <div class="field">
+          <label>كلمة المرور</label>
+          <input type="password" id="securityPassInput" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="doSecurityLogin()">دخول كأمن</button>
+        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">sec123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
       </div>
 
       <div id="supLoginForm" style="display:none;">
@@ -716,7 +730,8 @@ const SEED_HOLIDAYS = [
  {name:"عيد الاضحى",date:"2026-05-28"},
  {name:"عيد الاضحى",date:"2026-05-29"},
  {name:"رأس السنة الهجرية",date:"2026-06-18"},
- {name:"ذكرى 30 يونيو",date:"2026-07-02"}
+ {name:"ذكرى 30 يونيو",date:"2026-07-02"},
+ {name:"عيد ثورة 23 يوليو",from:"2026-07-22T21:00",to:"2026-07-23T09:00"}
 ];
 
 const SEED_SUPERVISORS = [
@@ -725,6 +740,10 @@ const SEED_SUPERVISORS = [
 
 const SEED_LEADS = [
  {id:1, name:"مدير المنطقة الأول", username:"lead1", password:"lead123", active:true}
+];
+
+const SEED_SECURITY = [
+ {id:1, name:"نقطة أمن الاستقبال", username:"security1", password:"sec123", active:true}
 ];
 
 const SEED_LEAVE_TYPES = ["إجازة سنوية","إجازة عارضة","إجازة مرضية","بدون إذن","مأمورية"];
@@ -766,6 +785,7 @@ async function loadData(){
       if(!DATA.entries) DATA.entries = [];
       if(!DATA.supervisors) DATA.supervisors = JSON.parse(JSON.stringify(SEED_SUPERVISORS));
       if(!DATA.leads) DATA.leads = JSON.parse(JSON.stringify(SEED_LEADS));
+      if(!DATA.security) DATA.security = JSON.parse(JSON.stringify(SEED_SECURITY));
       if(!DATA.leaveRequests) DATA.leaveRequests = [];
       if(!DATA.settings.leaveTypes) DATA.settings.leaveTypes = JSON.parse(JSON.stringify(SEED_LEAVE_TYPES));
       DATA.supervisors.forEach(s=>{ if(s.leadId===undefined) s.leadId=null; });
@@ -773,6 +793,10 @@ async function loadData(){
       if(!DATA.monthlyEvaluations) DATA.monthlyEvaluations = [];
       DATA.employees.forEach(e=>{ if(e.incentive===undefined) e.incentive = e.transport||0; if(e.photo===undefined) e.photo=null; if(e.monthlySalary===undefined) e.monthlySalary=0; if(e.pin===undefined) e.pin=''; if(e.supervisorId===undefined) e.supervisorId=null; });
       if(!DATA.settings.annualBonus) DATA.settings.annualBonus = {...SEED_SETTINGS.annualBonus};
+      if(!DATA.holidays.some(h=>h.from==='2026-07-22T21:00' && h.to==='2026-07-23T09:00')){
+        DATA.holidays.push({name:"عيد ثورة 23 يوليو", from:"2026-07-22T21:00", to:"2026-07-23T09:00"});
+        await saveData();
+      }
       return;
     }
   }catch(e){ console.error('Firebase load failed, seeding fresh data', e); }
@@ -782,6 +806,7 @@ async function loadData(){
     holidays: JSON.parse(JSON.stringify(SEED_HOLIDAYS)),
     supervisors: JSON.parse(JSON.stringify(SEED_SUPERVISORS)),
     leads: JSON.parse(JSON.stringify(SEED_LEADS)),
+    security: JSON.parse(JSON.stringify(SEED_SECURITY)),
     leaveRequests: [],
     dailyEvaluations: [],
     monthlyEvaluations: [],
@@ -812,6 +837,7 @@ function fmtDateAr(d){ return ARABIC_DAYS[d.getDay()] + '، ' + d.getDate() + ' 
 function empById(id){ return DATA.employees.find(e=>e.id===id); }
 function supById(id){ return DATA.supervisors.find(s=>s.id===id); }
 function leadById(id){ return DATA.leads.find(l=>l.id===id); }
+function secById(id){ return DATA.security.find(s=>s.id===id); }
 function escapeHtml(s){ return (s??'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtHrs(n){ return (Math.round(n*100)/100).toString(); }
 function fmtMoney(n){ return (Math.round(n*100)/100).toLocaleString('en-US'); }
@@ -854,6 +880,49 @@ function transportRateFor(project){
   return rule ? (rule.amount||0) : 0;
 }
 function openEntryFor(employeeId){ return DATA.entries.find(e=>e.employeeId===employeeId && !e.timeOut); }
+function entryStartEnd(entry){
+  const dIn = new Date(entry.date+'T'+entry.timeIn+':00');
+  let dOut = null;
+  if(entry.timeOut){
+    dOut = new Date(entry.date+'T'+entry.timeOut+':00');
+    if(dOut < dIn) dOut = new Date(dOut.getTime() + 24*3600*1000);
+  }
+  return {dIn, dOut};
+}
+// Supports two holiday shapes: {name,date} for a whole calendar day, or
+// {name,from,to} (datetime-local strings) for a range that can span midnight
+// (e.g. a night shift running into the holiday morning).
+function holidayNameForEntry(entry){
+  const {dIn, dOut} = entryStartEnd(entry);
+  const end = dOut || dIn;
+  for(const h of DATA.holidays){
+    if(h.from && h.to){
+      const hf = new Date(h.from), ht = new Date(h.to);
+      if(dIn < ht && end > hf) return h.name;
+    }else if(h.date && entry.date===h.date){
+      return h.name;
+    }
+  }
+  return null;
+}
+function isTodayHoliday(){
+  const now = new Date();
+  const today = todayStr();
+  return DATA.holidays.some(h=>{
+    if(h.date) return h.date===today;
+    if(h.from && h.to) return now >= new Date(h.from) && now <= new Date(h.to);
+    return false;
+  });
+}
+function holidaySortKey(h){ return h.date || (h.from||''); }
+function holidayLabel(h){
+  if(h.date) return h.date;
+  if(h.from && h.to){
+    const fmt = s=>{ const d=new Date(s); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); };
+    return `من ${fmt(h.from)} إلى ${fmt(h.to)}`;
+  }
+  return '—';
+}
 
 /* ==========================================================
    PUNCH META: LOCATION / IP / DEVICE / GREETING
@@ -958,7 +1027,6 @@ function computePeriodFinancials(employeeId, from, to){
   });
   const byDate = {};
   entries.forEach(e=>{ (byDate[e.date] ||= []).push(e); });
-  const holidaySet = {}; DATA.holidays.forEach(h=>{ holidaySet[h.date]=h.name; });
   let transportTotal=0; const transportDays=[];
   let holidayTotal=0; const holidayDays=[];
   Object.keys(byDate).sort().forEach(date=>{
@@ -966,7 +1034,9 @@ function computePeriodFinancials(employeeId, from, to){
     const proj = dayEntries[0].project||'';
     const rate = transportRateFor(proj);
     if(rate>0){ transportTotal+=rate; transportDays.push({date,project:proj,amount:rate}); }
-    if(holidaySet[date]){ holidayTotal += (DATA.settings.holidayBonus||0); holidayDays.push({date,name:holidaySet[date]}); }
+    let matchedName = null;
+    for(const e of dayEntries){ const n = holidayNameForEntry(e); if(n){ matchedName = n; break; } }
+    if(matchedName){ holidayTotal += (DATA.settings.holidayBonus||0); holidayDays.push({date,name:matchedName}); }
   });
   const months = monthsBetween(from,to);
   const th = DATA.settings.incentiveThreshold||4.5;
@@ -990,13 +1060,13 @@ function computeDaySummary(dateStr){
   const byEmp={};
   dayEntries.forEach(e=>{ (byEmp[e.employeeId] ||= []).push(e); });
   let otHours=0, otPay=0, transportTotal=0, holidayTotal=0;
-  const isHoliday = DATA.holidays.some(h=>h.date===dateStr);
   Object.keys(byEmp).forEach(empId=>{
     const list = byEmp[empId];
     list.forEach(e=>{ const h=computeEntryHours(e); otHours+=h.ot; otPay += h.ot*(DATA.settings.otHourlyRate||0); });
     const proj = list[0].project||'';
     transportTotal += transportRateFor(proj);
-    if(isHoliday) holidayTotal += (DATA.settings.holidayBonus||0);
+    const isHolidayForEmp = list.some(e=>holidayNameForEntry(e));
+    if(isHolidayForEmp) holidayTotal += (DATA.settings.holidayBonus||0);
   });
   return {otHours,otPay,transportTotal,holidayTotal, headcount:Object.keys(byEmp).length};
 }
@@ -1057,10 +1127,12 @@ setInterval(tickClock, 1000);
 function setLoginRole(role){
   loginRole = role;
   document.getElementById('tabAdmin').classList.toggle('active', role==='admin');
+  document.getElementById('tabSecurity').classList.toggle('active', role==='security');
   document.getElementById('tabLead').classList.toggle('active', role==='lead');
   document.getElementById('tabSup').classList.toggle('active', role==='supervisor');
   document.getElementById('tabEmp').classList.toggle('active', role==='employee');
   document.getElementById('adminLoginForm').style.display = role==='admin' ? 'block':'none';
+  document.getElementById('securityLoginForm').style.display = role==='security' ? 'block':'none';
   document.getElementById('leadLoginForm').style.display = role==='lead' ? 'block':'none';
   document.getElementById('supLoginForm').style.display = role==='supervisor' ? 'block':'none';
   document.getElementById('empLoginForm').style.display = role==='employee' ? 'block':'none';
@@ -1080,6 +1152,13 @@ function doAdminLogin(){
   const pass = document.getElementById('adminPassInput').value;
   if(pass === DATA.settings.adminPassword){ SESSION = {role:'admin'}; enterApp(); }
   else showLoginErr('كلمة المرور غير صحيحة.');
+}
+function doSecurityLogin(){
+  const user = document.getElementById('securityUserInput').value.trim();
+  const pass = document.getElementById('securityPassInput').value;
+  const sec = DATA.security.find(s=>s.username===user && s.active);
+  if(sec && sec.password===pass){ SESSION={role:'security', securityId:sec.id}; enterApp(); }
+  else showLoginErr('بيانات الدخول غير صحيحة.');
 }
 function doLeadLogin(){
   const user = document.getElementById('leadUserInput').value.trim();
@@ -1109,6 +1188,8 @@ function logout(){
   document.getElementById('app-shell').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('adminPassInput').value='';
+  document.getElementById('securityUserInput').value='';
+  document.getElementById('securityPassInput').value='';
   document.getElementById('leadUserInput').value='';
   document.getElementById('leadPassInput').value='';
   document.getElementById('supUserInput').value='';
@@ -1148,9 +1229,22 @@ function enterApp(){
       {id:'holidays', ico:'📅', label:'الإجازات الرسمية'},
       {id:'supervisors', ico:'🛡️', label:'المشرفون'},
       {id:'leads', ico:'🧭', label:'المدراء (Leads)'},
+      {id:'security', ico:'👮', label:'الأمن'},
       {id:'settings', ico:'⚙️', label:'الإعدادات'},
     ]);
     switchTab('overview');
+  }else if(SESSION.role==='security'){
+    const sec = secById(SESSION.securityId);
+    document.getElementById('whoBox').innerHTML = `
+      <div class="avatar" style="background:var(--navy-3);">${escapeHtml((sec.name||'?').charAt(0))}</div>
+      <div><div class="name">${escapeHtml(sec.name)}</div><div class="role">أمن</div></div>`;
+    document.getElementById('topbarUser').innerHTML = `
+      <div style="text-align:left;"><div class="name">${escapeHtml(sec.name)}</div><div class="role">أمن</div></div>
+      <div class="avatar" style="background:var(--navy-3);">${escapeHtml((sec.name||'?').charAt(0))}</div>`;
+    buildNav([
+      {id:'kiosk', ico:'🛂', label:'تسجيل حضور / انصراف'},
+    ]);
+    switchTab('kiosk');
   }else if(SESSION.role==='lead'){
     const lead = leadById(SESSION.leadId);
     document.getElementById('whoBox').innerHTML = `
@@ -1222,8 +1316,10 @@ function switchTab(tab){
     holidays:['الإجازات الرسمية','إدارة أيام العطلات الرسمية'],
     supervisors:['المشرفون','إدارة حسابات مشرفي الورديات'],
     leads:['المدراء (Leads)','إدارة حسابات مدراء المشرفين'],
+    security:['الأمن','إدارة حسابات نقاط الأمن'],
     settings:['الإعدادات','قيم الأجور والبدلات والحوافز'],
     clock:['تسجيل حضور / انصراف','بصمة اليوم'],
+    kiosk:['تسجيل حضور / انصراف','اختر الموظف وسجّل حضوره أو انصرافه'],
     mytimesheet:['سجلي الشخصي','سجل الحضور والانصراف الخاص بك'],
     myfinancial:['مستحقاتي المالية','عرض مستحقاتك خلال فترة محددة'],
   };
@@ -1233,6 +1329,7 @@ function switchTab(tab){
     overview: renderOverview, activity: renderActivityTab, entries: renderEntriesTab,
     leaves_admin: renderLeavesAdminTab, leaves_lead: renderLeavesLeadTab, leaves_sup: renderLeavesSupTab, leaves_emp: renderLeavesEmpTab,
     dailyeval: renderDailyEvalTab, monthlyeval: renderMonthlyEvalTab, financial: renderFinancialTab, yearlybonus: renderYearlyBonusTab,
+    security: renderSecurityTab, kiosk: renderKioskTab,
     leads: renderLeadsTab,
     employees: renderEmployeesTab, projects: renderProjectsTab, holidays: renderHolidaysTab,
     supervisors: renderSupervisorsTab, settings: renderSettingsTab,
@@ -1262,7 +1359,7 @@ function renderOverview(){
   const activeEmps = DATA.employees.filter(e=>e.active).length;
   const daySum = computeDaySummary(today);
   const missingRate = DATA.employees.filter(e=>e.active && !(e.hourlyRate>0)).length;
-  const isHolidayToday = DATA.holidays.some(h=>h.date===today);
+  const isHolidayToday = isTodayHoliday();
 
   const html = `
     ${missingRate>0 ? `<div class="notice-banner">⚠️ يوجد <b>${missingRate}</b> موظف بدون أجر بالساعة محدد — من "الموظفون" لإضافته حتى تُحسب الأجور بشكل صحيح.</div>`:''}
@@ -1472,10 +1569,10 @@ async function deleteProject(idx){
    ADMIN: HOLIDAYS
    ========================================================== */
 function renderHolidaysTab(){
-  const list = DATA.holidays.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const list = DATA.holidays.slice().sort((a,b)=>holidaySortKey(a).localeCompare(holidaySortKey(b)));
   const rows = list.map((h)=>{
     const idx = DATA.holidays.indexOf(h);
-    return `<tr><td>${escapeHtml(h.name)}</td><td class="mono">${h.date}</td>
+    return `<tr><td>${escapeHtml(h.name)}</td><td class="mono">${holidayLabel(h)}</td>
     <td style="text-align:left;"><button class="btn-sm btn-danger" onclick="deleteHoliday(${idx})">حذف</button></td></tr>`;
   }).join('');
   document.getElementById('content').innerHTML = `
@@ -1485,17 +1582,30 @@ function renderHolidaysTab(){
         <button class="btn-sm btn-go" onclick="addHolidayModal()">+ إضافة إجازة</button>
       </div>
       <div class="panel-body table-wrap">
-        ${list.length? `<table><thead><tr><th>المناسبة</th><th>التاريخ</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">📅</div>لا توجد إجازات مسجلة</div>`}
+        ${list.length? `<table><thead><tr><th>المناسبة</th><th>التاريخ / الفترة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">📅</div>لا توجد إجازات مسجلة</div>`}
       </div>
     </div>
-    <div class="notice-banner">🎉 كل حضور فعلي في يوم إجازة رسمية يضيف ${fmtMoney(DATA.settings.holidayBonus)} جنيه تلقائيًا (قابل للتعديل من الإعدادات).</div>
+    <div class="notice-banner">🎉 كل حضور فعلي في يوم إجازة رسمية (أو ضمن فترة إجازة محددة بالساعة) يضيف ${fmtMoney(DATA.settings.holidayBonus)} جنيه تلقائيًا (قابل للتعديل من الإعدادات).</div>
   `;
 }
 function addHolidayModal(){
   openModal('إضافة إجازة رسمية', `
     <div class="form-grid">
       <div class="f-field full"><label>اسم المناسبة</label><input id="f_hname"></div>
-      <div class="f-field full"><label>التاريخ</label><input id="f_hdate" type="date"></div>
+      <div class="f-field full">
+        <label>نوع التحديد</label>
+        <select id="f_htype" onchange="toggleHolidayTypeFields()">
+          <option value="single">يوم واحد</option>
+          <option value="range">فترة (من تاريخ ووقت — إلى تاريخ ووقت)</option>
+        </select>
+      </div>
+      <div class="f-field full" id="f_h_single_wrap"><label>التاريخ</label><input id="f_hdate" type="date"></div>
+      <div class="f-field full" id="f_h_range_wrap" style="display:none;">
+        <label>من تاريخ ووقت</label><input id="f_hfrom" type="datetime-local">
+      </div>
+      <div class="f-field full" id="f_h_range_wrap2" style="display:none;">
+        <label>إلى تاريخ ووقت</label><input id="f_hto" type="datetime-local">
+      </div>
     </div>
     <div class="f-actions">
       <button class="btn-sm btn-go" onclick="saveHoliday()">حفظ</button>
@@ -1503,11 +1613,27 @@ function addHolidayModal(){
     </div>
   `);
 }
+function toggleHolidayTypeFields(){
+  const type = document.getElementById('f_htype').value;
+  document.getElementById('f_h_single_wrap').style.display = type==='single' ? '' : 'none';
+  document.getElementById('f_h_range_wrap').style.display = type==='range' ? '' : 'none';
+  document.getElementById('f_h_range_wrap2').style.display = type==='range' ? '' : 'none';
+}
 async function saveHoliday(){
   const name = document.getElementById('f_hname').value.trim();
-  const date = document.getElementById('f_hdate').value;
-  if(!name || !date){ alert('اكتب اسم المناسبة والتاريخ'); return; }
-  DATA.holidays.push({name,date});
+  const type = document.getElementById('f_htype').value;
+  if(!name){ alert('من فضلك اكتب اسم المناسبة'); return; }
+  if(type==='range'){
+    const from = document.getElementById('f_hfrom').value;
+    const to = document.getElementById('f_hto').value;
+    if(!from || !to){ alert('من فضلك اختر تاريخ ووقت البداية والنهاية'); return; }
+    if(new Date(to) <= new Date(from)){ alert('تاريخ ووقت النهاية يجب أن يكون بعد البداية'); return; }
+    DATA.holidays.push({name, from, to});
+  }else{
+    const date = document.getElementById('f_hdate').value;
+    if(!date){ alert('من فضلك اختر التاريخ'); return; }
+    DATA.holidays.push({name,date});
+  }
   await saveData(); closeModal(); renderHolidaysTab();
 }
 async function deleteHoliday(idx){
@@ -1654,6 +1780,167 @@ async function deleteLead(id){
   DATA.leads = DATA.leads.filter(l=>l.id!==id);
   DATA.supervisors.forEach(s=>{ if(s.leadId===id) s.leadId=null; });
   await saveData(); renderLeadsTab();
+}
+
+/* ==========================================================
+   ADMIN: SECURITY ACCOUNTS (kiosk-only clock in/out access)
+   ========================================================== */
+function renderSecurityTab(){
+  const rows = DATA.security.map(s=>`
+    <tr>
+      <td>${escapeHtml(s.name)}</td>
+      <td class="mono">${escapeHtml(s.username)}</td>
+      <td>${s.active? '<span class="tag tag-open">نشط</span>' : '<span class="tag tag-closed">موقوف</span>'}</td>
+      <td>
+        <button class="btn-sm btn-teal" onclick="editSecurity(${s.id})">تعديل</button>
+        <button class="btn-sm btn-danger" onclick="deleteSecurity(${s.id})">حذف</button>
+      </td>
+    </tr>`).join('');
+  document.getElementById('content').innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h3>حسابات الأمن <span class="badge-count">${DATA.security.length}</span></h3>
+        <button class="btn-sm btn-go" onclick="editSecurity(null)">+ إضافة حساب أمن</button>
+      </div>
+      <div class="panel-body table-wrap">
+        ${DATA.security.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">👮</div>لا يوجد حسابات أمن بعد</div>`}
+      </div>
+    </div>
+    <div class="notice-banner">💡 حساب الأمن يقدر فقط يسجّل حضور/انصراف أي موظف من شاشة واحدة (نقطة دخول)، ومفيهوش أي صلاحية إدارية أخرى — لا يشوف بيانات مالية ولا يقدر يعدّل أي حاجة.</div>
+  `;
+}
+function editSecurity(id){
+  const s = id? secById(id) : {id:null,name:'',username:'',password:'',active:true};
+  openModal(id?'تعديل حساب أمن':'إضافة حساب أمن', `
+    <div class="form-grid">
+      <div class="f-field full"><label>الاسم</label><input id="sec_name" value="${escapeHtml(s.name)}"></div>
+      <div class="f-field"><label>اسم المستخدم</label><input id="sec_user" value="${escapeHtml(s.username)}"></div>
+      <div class="f-field"><label>كلمة المرور</label><input id="sec_pass" type="text" value="${escapeHtml(s.password)}"></div>
+      <div class="f-field full"><label>الحالة</label>
+        <select id="sec_active">
+          <option value="1" ${s.active?'selected':''}>نشط</option>
+          <option value="0" ${!s.active?'selected':''}>موقوف</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-actions">
+      <button class="btn-sm btn-go" onclick="saveSecurity(${id})">حفظ</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal()">إلغاء</button>
+    </div>
+  `);
+}
+async function saveSecurity(id){
+  const name = document.getElementById('sec_name').value.trim();
+  const username = document.getElementById('sec_user').value.trim();
+  const password = document.getElementById('sec_pass').value;
+  const active = document.getElementById('sec_active').value==='1';
+  if(!name || !username || !password){ alert('من فضلك أكمل كل الحقول'); return; }
+  const dup = DATA.security.find(x=>x.username===username && x.id!==id);
+  if(dup){ alert('اسم المستخدم مستخدم بالفعل'); return; }
+  if(id){ Object.assign(secById(id), {name,username,password,active}); }
+  else{ DATA.security.push({id: nextId(DATA.security), name,username,password,active}); }
+  await saveData(); closeModal(); renderSecurityTab();
+}
+async function deleteSecurity(id){
+  if(!confirm('تأكيد حذف حساب الأمن هذا؟')) return;
+  DATA.security = DATA.security.filter(s=>s.id!==id);
+  await saveData(); renderSecurityTab();
+}
+
+/* ==========================================================
+   SECURITY: KIOSK — clock any employee in/out, no other permissions
+   ========================================================== */
+function renderKioskTab(){
+  const activeEmps = DATA.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  document.getElementById('content').innerHTML = `
+    <div class="punch-wrap">
+      <div class="punch-card">
+        <div class="punch-clock-big mono" id="punchClockBig">00:00:00</div>
+        <div class="punch-date" id="punchDateBig">—</div>
+        <div class="punch-project">
+          <label>اختر الموظف</label>
+          <select id="kioskEmp" onchange="renderKioskStatus()">
+            ${activeEmps.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.type)}</option>`).join('')}
+          </select>
+        </div>
+        <div id="kioskStatusWrap"></div>
+      </div>
+      <div class="side-card">
+        <h4>الحاضرون الآن</h4>
+        <div id="kioskPresentWrap"></div>
+      </div>
+    </div>
+  `;
+  tickClock();
+  renderKioskStatus();
+  renderKioskPresentList();
+}
+function renderKioskStatus(){
+  const wrap = document.getElementById('kioskStatusWrap');
+  const empId = parseInt(document.getElementById('kioskEmp').value);
+  const emp = empById(empId);
+  if(!emp || !wrap) return;
+  const open = openEntryFor(emp.id);
+  wrap.innerHTML = `
+    <div class="punch-avatar">${getAvatarHtml(emp.name, emp.photo, 'avatar-lg')}</div>
+    <div class="punch-status ${open?'in':'out'}" style="margin-top:10px;">${open? '✅ مسجّل حضور الآن — دخل الساعة '+open.timeIn : '⏸ لم يسجل حضور اليوم بعد'}</div>
+    <div class="punch-project">
+      <label>${open? 'وقت الانصراف' : 'وقت الحضور'}</label>
+      <input type="time" id="kioskTime" value="${nowTimeStr()}">
+    </div>
+    <button id="punchBtn" class="punch-btn ${open?'working':'ready'}" onclick="handleKioskPunch()">
+      ${open? 'تسجيل انصراف' : 'تسجيل حضور'}
+    </button>
+    ${!open? `
+    <div class="punch-project">
+      <label>المشروع / الموقع</label>
+      <select id="kioskProject">${DATA.projects.map(p=>`<option>${escapeHtml(p)}</option>`).join('')}</select>
+    </div>` : ''}
+    <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;">⏱️ الوقت معبّى تلقائيًا بالوقت الحالي، وتقدر تعدّله يدويًا لو الموظف حضر/انصرف في وقت مختلف.</div>
+  `;
+}
+function renderKioskPresentList(){
+  const wrap = document.getElementById('kioskPresentWrap');
+  if(!wrap) return;
+  const open = DATA.entries.filter(e=>!e.timeOut).sort((a,b)=> (b.date+b.timeIn).localeCompare(a.date+a.timeIn));
+  wrap.innerHTML = open.length? open.map(e=>{
+    const emp = empById(e.employeeId);
+    if(!emp) return '';
+    return `<div class="mini-stat"><div class="k">${getAvatarHtml(emp.name,emp.photo,'avatar-sm')} ${escapeHtml(emp.name)}</div><div class="v mono">${e.timeIn}</div></div>`;
+  }).join('') : `<div class="empty-state" style="padding:20px;"><div class="ico">🌙</div>لا يوجد أحد حاليًا</div>`;
+}
+async function handleKioskPunch(){
+  const empId = parseInt(document.getElementById('kioskEmp').value);
+  const emp = empById(empId);
+  const open = openEntryFor(emp.id);
+  const chosenTime = document.getElementById('kioskTime').value || nowTimeStr();
+  const btn = document.getElementById('punchBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '... جارِ التسجيل'; }
+  const [geo, ip] = await Promise.all([ getGeoLocation(), getPublicIp() ]);
+  const device = getDeviceInfo();
+  const sec = secById(SESSION.securityId);
+  if(open){
+    if(chosenTime <= open.timeIn){ alert('وقت الانصراف لازم يكون بعد وقت الحضور ('+open.timeIn+')'); if(btn){btn.disabled=false; btn.textContent='تسجيل انصراف';} return; }
+    open.timeOut = chosenTime;
+    open.locationOut = geo;
+    open.ipOut = ip;
+    open.deviceOut = device;
+    open.checkedOutBySecurity = sec ? sec.name : null;
+    await saveData();
+    showToast(greetingFor(emp.name, 'out'));
+  }else{
+    const project = document.getElementById('kioskProject').value;
+    DATA.entries.push({
+      id: nextId(DATA.entries), employeeId: emp.id, date: todayStr(),
+      timeIn: chosenTime, timeOut: null, project, notes:'',
+      locationIn: geo, ipIn: ip, deviceIn: device,
+      checkedInBySecurity: sec ? sec.name : null
+    });
+    await saveData();
+    showToast(greetingFor(emp.name, 'in'));
+  }
+  renderKioskStatus();
+  renderKioskPresentList();
 }
 
 /* ==========================================================
@@ -2651,7 +2938,10 @@ function printFinancialReportPdf(employeeId, from, to){
       .head img{width:56px;height:56px;border-radius:50%;}
       .head h1{font-size:18px;margin:0;color:#003A72;}
       .head .sub{font-size:12px;color:#5C6F84;margin-top:2px;}
-      .meta{display:flex;gap:24px;margin-bottom:16px;font-size:13px;flex-wrap:wrap;}
+      .emp-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;background:#F4F7FA;border-radius:10px;padding:12px 16px;}
+      .emp-photo{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none;border:2px solid #003A72;}
+      .emp-photo-initial{width:52px;height:52px;border-radius:50%;flex:none;background:#003A72;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;}
+      .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:13px;}
       .meta b{color:#003A72;}
       h2{font-size:14px;color:#003A72;border-bottom:1px solid #DCE2E8;padding-bottom:6px;margin-top:22px;}
       table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
@@ -2666,7 +2956,10 @@ function printFinancialReportPdf(employeeId, from, to){
       <img src="data:image/png;base64,${LOGO_SMALL_B64}">
       <div><h1>IFT Corporation — تقرير المستحقات المالية</h1><div class="sub">الفترة من ${from} إلى ${to}</div></div>
     </div>
-    <div class="meta"><div>الموظف: <b>${escapeHtml(emp.name)}</b></div><div>الوظيفة: <b>${escapeHtml(emp.type)}</b></div><div>الهاتف: <b>${escapeHtml(emp.phone||'-')}</b></div></div>
+    <div class="emp-row">
+      ${emp.photo? `<img class="emp-photo" src="${emp.photo}">` : `<div class="emp-photo-initial">${escapeHtml((emp.name||'?').trim().charAt(0)||'?')}</div>`}
+      <div class="meta"><div>الموظف: <b>${escapeHtml(emp.name)}</b></div><div>الوظيفة: <b>${escapeHtml(emp.type)}</b></div><div>الهاتف: <b>${escapeHtml(emp.phone||'-')}</b></div></div>
+    </div>
     <h2>الملخص المالي</h2>
     <table>
       <tr><th>البند</th><th>القيمة (جنيه)</th></tr>
@@ -2705,15 +2998,16 @@ function printMonthlyAllowancesReportPdf(from, to){
   let sumTransport=0, sumOt=0, sumIncentive=0, sumTotal=0;
   const rows = employees.map(emp=>{
     const f = computePeriodFinancials(emp.id, from, to);
-    const total = f.transportTotal + f.otPay + f.incentiveTotal;
-    sumTransport += f.transportTotal; sumOt += f.otPay; sumIncentive += f.incentiveTotal; sumTotal += total;
+    const otPlusHoliday = f.otPay + f.holidayTotal; // overtime amount now includes leave/holiday-day pay
+    const total = f.transportTotal + otPlusHoliday + f.incentiveTotal;
+    sumTransport += f.transportTotal; sumOt += otPlusHoliday; sumIncentive += f.incentiveTotal; sumTotal += total;
     const avatar = emp.photo
       ? `<img src="${emp.photo}" class="ph">`
       : `<div class="ph ph-initial">${escapeHtml((emp.name||'?').trim().charAt(0)||'?')}</div>`;
     return `<tr>
       <td class="name-cell">${avatar}<span>${escapeHtml(emp.name)}</span></td>
       <td class="mono">${fmtMoney(f.transportTotal)}</td>
-      <td class="mono">${fmtMoney(f.otPay)}</td>
+      <td class="mono">${fmtMoney(otPlusHoliday)}</td>
       <td class="mono">${fmtMoney(f.incentiveTotal)}</td>
       <td class="mono tot">${fmtMoney(total)}</td>
     </tr>`;
@@ -2748,7 +3042,7 @@ function printMonthlyAllowancesReportPdf(from, to){
       <div><h1>IFT Corporation — التقرير الشهري لمستحقات الموظفين</h1><div class="sub">الفترة من ${from} إلى ${to}</div></div>
     </div>
     <table>
-      <thead><tr><th>اسم الزميل</th><th>مبلغ بدل الانتقالات</th><th>مبلغ ساعات الأوفر تايم</th><th>مبلغ الحافز الشهري</th><th>الإجمالي</th></tr></thead>
+      <thead><tr><th>اسم الزميل</th><th>مبلغ بدل الانتقالات</th><th>مبلغ الأوفر تايم + الإجازات</th><th>مبلغ الحافز الشهري</th><th>الإجمالي</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="5" style="text-align:center;">لا يوجد موظفون نشطون</td></tr>`}</tbody>
       <tfoot><tr><td>الإجمالي العام</td><td class="mono">${fmtMoney(sumTransport)}</td><td class="mono">${fmtMoney(sumOt)}</td><td class="mono">${fmtMoney(sumIncentive)}</td><td class="mono">${fmtMoney(sumTotal)}</td></tr></tfoot>
     </table>
