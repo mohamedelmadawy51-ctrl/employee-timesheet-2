@@ -357,6 +357,13 @@ th{
 td{padding:9px 9px;border-bottom:1px solid #F0F2F5;white-space:nowrap;}
 tr:hover td{background:#FAFBFC;}
 .table-wrap{overflow-x:auto;}
+.sch-table{border-collapse:collapse;font-size:11px;}
+.sch-table th, .sch-table td{border:1px solid var(--border);padding:4px 6px;text-align:center;white-space:nowrap;}
+.sch-table th{background:var(--paper);color:#5C6F84;font-weight:700;font-size:10px;}
+.sch-name-col{position:sticky;right:0;background:var(--card);text-align:right !important;min-width:130px;font-weight:700;z-index:1;}
+.sch-day-col{min-width:58px;}
+.sch-cell{min-width:58px;transition:filter .1s;}
+.sch-cell:hover{filter:brightness(0.93);}
 .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
 .tag-open{background:var(--success-bg);color:var(--success);}
 .tag-closed{background:#EEE;color:#777;}
@@ -718,20 +725,13 @@ const SEED_PROJECTS = [
 ];
 
 const SEED_HOLIDAYS = [
- {name:"عيد الفطر",date:"2026-03-19"},
- {name:"عيد الفطر",date:"2026-03-20"},
- {name:"عيد الفطر",date:"2026-03-21"},
- {name:"عيد الفطر",date:"2026-03-22"},
- {name:"عيد الفطر",date:"2026-03-23"},
- {name:"شم النسيم",date:"2026-04-13"},
- {name:"عيد العمال",date:"2026-05-07"},
- {name:"عيد الاضحى",date:"2026-05-26"},
- {name:"عيد الاضحى",date:"2026-05-27"},
- {name:"عيد الاضحى",date:"2026-05-28"},
- {name:"عيد الاضحى",date:"2026-05-29"},
- {name:"رأس السنة الهجرية",date:"2026-06-18"},
- {name:"ذكرى 30 يونيو",date:"2026-07-02"},
- {name:"عيد ثورة 23 يوليو",from:"2026-07-22T21:00",to:"2026-07-23T09:00"}
+ {id:1, name:"عيد الفطر", fromDateTime:"2026-03-19T00:00", toDateTime:"2026-03-24T00:00"},
+ {id:2, name:"شم النسيم", fromDateTime:"2026-04-13T00:00", toDateTime:"2026-04-14T00:00"},
+ {id:3, name:"عيد العمال", fromDateTime:"2026-05-07T00:00", toDateTime:"2026-05-08T00:00"},
+ {id:4, name:"عيد الاضحى", fromDateTime:"2026-05-26T00:00", toDateTime:"2026-05-30T00:00"},
+ {id:5, name:"رأس السنة الهجرية", fromDateTime:"2026-06-18T00:00", toDateTime:"2026-06-19T00:00"},
+ {id:6, name:"ذكرى 30 يونيو", fromDateTime:"2026-07-02T00:00", toDateTime:"2026-07-03T00:00"},
+ {id:7, name:"ثورة 23 يوليو", fromDateTime:"2026-07-22T21:00", toDateTime:"2026-07-23T09:00"}
 ];
 
 const SEED_SUPERVISORS = [
@@ -760,6 +760,7 @@ const SEED_SETTINGS = {
   incentiveThreshold: 4.5,
   annualBonus: { minAvg:4.5, midAvg:5, maxAvg:7, minMonths:2, maxMonths:3 },
   leaveTypes: ["إجازة سنوية","إجازة عارضة","إجازة مرضية","بدون إذن","مأمورية"],
+  locationGroups: ["التجمع","أكتوبر","المطار","المقطم"],
   adminPassword: "admin123",
   offDay: "Friday"
 };
@@ -788,15 +789,23 @@ async function loadData(){
       if(!DATA.security) DATA.security = JSON.parse(JSON.stringify(SEED_SECURITY));
       if(!DATA.leaveRequests) DATA.leaveRequests = [];
       if(!DATA.settings.leaveTypes) DATA.settings.leaveTypes = JSON.parse(JSON.stringify(SEED_LEAVE_TYPES));
+      if(!DATA.settings.locationGroups) DATA.settings.locationGroups = JSON.parse(JSON.stringify(SEED_SETTINGS.locationGroups));
       DATA.supervisors.forEach(s=>{ if(s.leadId===undefined) s.leadId=null; });
       if(!DATA.dailyEvaluations) DATA.dailyEvaluations = [];
       if(!DATA.monthlyEvaluations) DATA.monthlyEvaluations = [];
-      DATA.employees.forEach(e=>{ if(e.incentive===undefined) e.incentive = e.transport||0; if(e.photo===undefined) e.photo=null; if(e.monthlySalary===undefined) e.monthlySalary=0; if(e.pin===undefined) e.pin=''; if(e.supervisorId===undefined) e.supervisorId=null; });
+      DATA.employees.forEach(e=>{ if(e.incentive===undefined) e.incentive = e.transport||0; if(e.photo===undefined) e.photo=null; if(e.monthlySalary===undefined) e.monthlySalary=0; if(e.pin===undefined) e.pin=''; if(e.supervisorId===undefined) e.supervisorId=null; if(e.baseLocation===undefined) e.baseLocation=''; });
       if(!DATA.settings.annualBonus) DATA.settings.annualBonus = {...SEED_SETTINGS.annualBonus};
-      if(!DATA.holidays.some(h=>h.from==='2026-07-22T21:00' && h.to==='2026-07-23T09:00')){
-        DATA.holidays.push({name:"عيد ثورة 23 يوليو", from:"2026-07-22T21:00", to:"2026-07-23T09:00"});
-        await saveData();
-      }
+      if(!DATA.schedule) DATA.schedule = {};
+      // Migrate legacy holidays ({name,date}) to the new from/to datetime range format
+      let holidayIdSeed = DATA.holidays.reduce((m,h)=>Math.max(m,h.id||0),0);
+      DATA.holidays = DATA.holidays.map(h=>{
+        if(h.fromDateTime && h.toDateTime){ if(!h.id) h.id = ++holidayIdSeed; return h; }
+        const d = new Date(h.date+'T00:00');
+        const next = new Date(d.getTime()+24*3600*1000);
+        const pad2 = n=>n.toString().padStart(2,'0');
+        const iso = dd=> dd.getFullYear()+'-'+pad2(dd.getMonth()+1)+'-'+pad2(dd.getDate())+'T00:00';
+        return { id: ++holidayIdSeed, name: h.name, fromDateTime: iso(d), toDateTime: iso(next) };
+      });
       return;
     }
   }catch(e){ console.error('Firebase load failed, seeding fresh data', e); }
@@ -808,9 +817,10 @@ async function loadData(){
     leads: JSON.parse(JSON.stringify(SEED_LEADS)),
     security: JSON.parse(JSON.stringify(SEED_SECURITY)),
     leaveRequests: [],
+    schedule: {},
     dailyEvaluations: [],
     monthlyEvaluations: [],
-    settings: {...SEED_SETTINGS, transportRates: JSON.parse(JSON.stringify(SEED_SETTINGS.transportRates)), annualBonus: {...SEED_SETTINGS.annualBonus}, leaveTypes: JSON.parse(JSON.stringify(SEED_LEAVE_TYPES))},
+    settings: {...SEED_SETTINGS, transportRates: JSON.parse(JSON.stringify(SEED_SETTINGS.transportRates)), annualBonus: {...SEED_SETTINGS.annualBonus}, leaveTypes: JSON.parse(JSON.stringify(SEED_LEAVE_TYPES)), locationGroups: JSON.parse(JSON.stringify(SEED_SETTINGS.locationGroups))},
     entries: []
   };
   await saveData();
@@ -880,49 +890,6 @@ function transportRateFor(project){
   return rule ? (rule.amount||0) : 0;
 }
 function openEntryFor(employeeId){ return DATA.entries.find(e=>e.employeeId===employeeId && !e.timeOut); }
-function entryStartEnd(entry){
-  const dIn = new Date(entry.date+'T'+entry.timeIn+':00');
-  let dOut = null;
-  if(entry.timeOut){
-    dOut = new Date(entry.date+'T'+entry.timeOut+':00');
-    if(dOut < dIn) dOut = new Date(dOut.getTime() + 24*3600*1000);
-  }
-  return {dIn, dOut};
-}
-// Supports two holiday shapes: {name,date} for a whole calendar day, or
-// {name,from,to} (datetime-local strings) for a range that can span midnight
-// (e.g. a night shift running into the holiday morning).
-function holidayNameForEntry(entry){
-  const {dIn, dOut} = entryStartEnd(entry);
-  const end = dOut || dIn;
-  for(const h of DATA.holidays){
-    if(h.from && h.to){
-      const hf = new Date(h.from), ht = new Date(h.to);
-      if(dIn < ht && end > hf) return h.name;
-    }else if(h.date && entry.date===h.date){
-      return h.name;
-    }
-  }
-  return null;
-}
-function isTodayHoliday(){
-  const now = new Date();
-  const today = todayStr();
-  return DATA.holidays.some(h=>{
-    if(h.date) return h.date===today;
-    if(h.from && h.to) return now >= new Date(h.from) && now <= new Date(h.to);
-    return false;
-  });
-}
-function holidaySortKey(h){ return h.date || (h.from||''); }
-function holidayLabel(h){
-  if(h.date) return h.date;
-  if(h.from && h.to){
-    const fmt = s=>{ const d=new Date(s); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); };
-    return `من ${fmt(h.from)} إلى ${fmt(h.to)}`;
-  }
-  return '—';
-}
 
 /* ==========================================================
    PUNCH META: LOCATION / IP / DEVICE / GREETING
@@ -1015,6 +982,22 @@ function defaultPayPeriod(){
   return {from: toISO(start), to: toISO(end)};
 }
 
+function getEntryTimeRange(entry){
+  if(!entry.timeIn || !entry.timeOut) return null;
+  const start = new Date(entry.date+'T'+entry.timeIn+':00');
+  let end = new Date(entry.date+'T'+entry.timeOut+':00');
+  if(end.getTime() === start.getTime()) return {start, end:start}; // zero-duration, no overlap possible
+  if(end < start) end = new Date(end.getTime() + 24*3600*1000);
+  return {start, end};
+}
+function findOverlappingHoliday(entry){
+  const range = getEntryTimeRange(entry);
+  if(!range || range.start.getTime()===range.end.getTime()) return null;
+  return DATA.holidays.find(h=>{
+    const hFrom = new Date(h.fromDateTime), hTo = new Date(h.toDateTime);
+    return range.start < hTo && range.end > hFrom;
+  }) || null;
+}
 function computePeriodFinancials(employeeId, from, to){
   const emp = empById(employeeId);
   const entries = DATA.entries.filter(e=>e.employeeId===employeeId && e.date>=from && e.date<=to);
@@ -1028,15 +1011,19 @@ function computePeriodFinancials(employeeId, from, to){
   const byDate = {};
   entries.forEach(e=>{ (byDate[e.date] ||= []).push(e); });
   let transportTotal=0; const transportDays=[];
-  let holidayTotal=0; const holidayDays=[];
   Object.keys(byDate).sort().forEach(date=>{
     const dayEntries = byDate[date];
     const proj = dayEntries[0].project||'';
     const rate = transportRateFor(proj);
     if(rate>0){ transportTotal+=rate; transportDays.push({date,project:proj,amount:rate}); }
-    let matchedName = null;
-    for(const e of dayEntries){ const n = holidayNameForEntry(e); if(n){ matchedName = n; break; } }
-    if(matchedName){ holidayTotal += (DATA.settings.holidayBonus||0); holidayDays.push({date,name:matchedName}); }
+  });
+  // Holiday bonus: granted once per shift (entry) whose actual worked time overlaps
+  // a holiday's from→to window — not just "same calendar date" — so shifts like
+  // 22/7 9pm → 23/7 9am correctly count against a holiday defined the same way.
+  let holidayTotal=0; const holidayDays=[];
+  entries.forEach(e=>{
+    const match = findOverlappingHoliday(e);
+    if(match){ holidayTotal += (DATA.settings.holidayBonus||0); holidayDays.push({date:e.date, name:match.name, timeIn:e.timeIn, timeOut:e.timeOut}); }
   });
   const months = monthsBetween(from,to);
   const th = DATA.settings.incentiveThreshold||4.5;
@@ -1062,11 +1049,12 @@ function computeDaySummary(dateStr){
   let otHours=0, otPay=0, transportTotal=0, holidayTotal=0;
   Object.keys(byEmp).forEach(empId=>{
     const list = byEmp[empId];
-    list.forEach(e=>{ const h=computeEntryHours(e); otHours+=h.ot; otPay += h.ot*(DATA.settings.otHourlyRate||0); });
+    list.forEach(e=>{
+      const h=computeEntryHours(e); otHours+=h.ot; otPay += h.ot*(DATA.settings.otHourlyRate||0);
+      if(findOverlappingHoliday(e)) holidayTotal += (DATA.settings.holidayBonus||0);
+    });
     const proj = list[0].project||'';
     transportTotal += transportRateFor(proj);
-    const isHolidayForEmp = list.some(e=>holidayNameForEntry(e));
-    if(isHolidayForEmp) holidayTotal += (DATA.settings.holidayBonus||0);
   });
   return {otHours,otPay,transportTotal,holidayTotal, headcount:Object.keys(byEmp).length};
 }
@@ -1227,6 +1215,7 @@ function enterApp(){
       {id:'employees', ico:'👥', label:'الموظفون'},
       {id:'projects', ico:'📍', label:'المشاريع / المواقع'},
       {id:'holidays', ico:'📅', label:'الإجازات الرسمية'},
+      {id:'scheduleGrid', ico:'🗓️', label:'جدول الموظفين الشهري'},
       {id:'supervisors', ico:'🛡️', label:'المشرفون'},
       {id:'leads', ico:'🧭', label:'المدراء (Leads)'},
       {id:'security', ico:'👮', label:'الأمن'},
@@ -1314,6 +1303,7 @@ function switchTab(tab){
     employees:['الموظفون','إدارة بيانات الموظفين'],
     projects:['المشاريع / المواقع','إدارة قائمة المواقع والمشاريع'],
     holidays:['الإجازات الرسمية','إدارة أيام العطلات الرسمية'],
+    scheduleGrid:['جدول الموظفين الشهري','عرض الحضور الفعلي أو إعداد خطة للشهر القادم'],
     supervisors:['المشرفون','إدارة حسابات مشرفي الورديات'],
     leads:['المدراء (Leads)','إدارة حسابات مدراء المشرفين'],
     security:['الأمن','إدارة حسابات نقاط الأمن'],
@@ -1329,7 +1319,7 @@ function switchTab(tab){
     overview: renderOverview, activity: renderActivityTab, entries: renderEntriesTab,
     leaves_admin: renderLeavesAdminTab, leaves_lead: renderLeavesLeadTab, leaves_sup: renderLeavesSupTab, leaves_emp: renderLeavesEmpTab,
     dailyeval: renderDailyEvalTab, monthlyeval: renderMonthlyEvalTab, financial: renderFinancialTab, yearlybonus: renderYearlyBonusTab,
-    security: renderSecurityTab, kiosk: renderKioskTab,
+    security: renderSecurityTab, kiosk: renderKioskTab, scheduleGrid: renderScheduleTab,
     leads: renderLeadsTab,
     employees: renderEmployeesTab, projects: renderProjectsTab, holidays: renderHolidaysTab,
     supervisors: renderSupervisorsTab, settings: renderSettingsTab,
@@ -1359,7 +1349,8 @@ function renderOverview(){
   const activeEmps = DATA.employees.filter(e=>e.active).length;
   const daySum = computeDaySummary(today);
   const missingRate = DATA.employees.filter(e=>e.active && !(e.hourlyRate>0)).length;
-  const isHolidayToday = isTodayHoliday();
+  const nowMoment = new Date();
+  const isHolidayToday = DATA.holidays.some(h=> nowMoment >= new Date(h.fromDateTime) && nowMoment <= new Date(h.toDateTime));
 
   const html = `
     ${missingRate>0 ? `<div class="notice-banner">⚠️ يوجد <b>${missingRate}</b> موظف بدون أجر بالساعة محدد — من "الموظفون" لإضافته حتى تُحسب الأجور بشكل صحيح.</div>`:''}
@@ -1477,6 +1468,12 @@ function editEmployee(id){
           ${DATA.supervisors.filter(s=>s.active).map(s=>`<option value="${s.id}" ${e.supervisorId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}
         </select>
       </div>
+      <div class="f-field full"><label>الموقع الأساسي (لتوليد جدول الشهر تلقائيًا)</label>
+        <select id="f_baseloc">
+          <option value="">-- بدون --</option>
+          ${DATA.settings.locationGroups.map(l=>`<option value="${l}" ${e.baseLocation===l?'selected':''}>${escapeHtml(l)}</option>`).join('')}
+        </select>
+      </div>
       <div class="f-field full"><label>الحالة</label>
         <select id="f_active">
           <option value="1" ${e.active?'selected':''}>نشط</option>
@@ -1500,14 +1497,15 @@ async function saveEmployee(id){
   const monthlySalary = parseFloat(document.getElementById('f_salary').value)||0;
   const pin = document.getElementById('f_pin').value.trim();
   const supervisorId = document.getElementById('f_supervisor').value ? parseInt(document.getElementById('f_supervisor').value) : null;
+  const baseLocation = document.getElementById('f_baseloc').value;
   const active = document.getElementById('f_active').value==='1';
   if(!name){ alert('من فضلك اكتب اسم الموظف'); return; }
   if(id){
     const e = empById(id);
-    Object.assign(e, {name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,active});
+    Object.assign(e, {name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,active});
     if(_tempPhoto!==undefined) e.photo = _tempPhoto;
   }else{
-    DATA.employees.push({id: nextId(DATA.employees), name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,active, photo:_tempPhoto||null});
+    DATA.employees.push({id: nextId(DATA.employees), name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,active, photo:_tempPhoto||null});
   }
   await saveData();
   closeModal();
@@ -1568,78 +1566,347 @@ async function deleteProject(idx){
 /* ==========================================================
    ADMIN: HOLIDAYS
    ========================================================== */
+function fmtDateTimeAr(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  const dd = pad(d.getDate()), mm = pad(d.getMonth()+1);
+  const hh = d.getHours(), mi = pad(d.getMinutes());
+  const ampm = hh<12 ? 'ص' : 'م';
+  const h12 = ((hh%12)||12);
+  return `${dd}/${mm} — ${h12}:${mi} ${ampm}`;
+}
 function renderHolidaysTab(){
-  const list = DATA.holidays.slice().sort((a,b)=>holidaySortKey(a).localeCompare(holidaySortKey(b)));
-  const rows = list.map((h)=>{
-    const idx = DATA.holidays.indexOf(h);
-    return `<tr><td>${escapeHtml(h.name)}</td><td class="mono">${holidayLabel(h)}</td>
-    <td style="text-align:left;"><button class="btn-sm btn-danger" onclick="deleteHoliday(${idx})">حذف</button></td></tr>`;
-  }).join('');
+  const list = DATA.holidays.slice().sort((a,b)=>a.fromDateTime.localeCompare(b.fromDateTime));
+  const rows = list.map((h)=>`<tr>
+    <td>${escapeHtml(h.name)}</td>
+    <td class="mono">${fmtDateTimeAr(h.fromDateTime)}</td>
+    <td class="mono">${fmtDateTimeAr(h.toDateTime)}</td>
+    <td style="text-align:left;">
+      <button class="btn-sm btn-teal" onclick="editHoliday(${h.id})">تعديل</button>
+      <button class="btn-sm btn-danger" onclick="deleteHoliday(${h.id})">حذف</button>
+    </td></tr>`).join('');
   document.getElementById('content').innerHTML = `
     <div class="panel">
       <div class="panel-head">
         <h3>الإجازات الرسمية <span class="badge-count">${DATA.holidays.length}</span></h3>
-        <button class="btn-sm btn-go" onclick="addHolidayModal()">+ إضافة إجازة</button>
+        <button class="btn-sm btn-go" onclick="editHoliday(null)">+ إضافة إجازة</button>
       </div>
       <div class="panel-body table-wrap">
-        ${list.length? `<table><thead><tr><th>المناسبة</th><th>التاريخ / الفترة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">📅</div>لا توجد إجازات مسجلة</div>`}
+        ${list.length? `<table><thead><tr><th>المناسبة</th><th>تبدأ من</th><th>تنتهي عند</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">📅</div>لا توجد إجازات مسجلة</div>`}
       </div>
     </div>
-    <div class="notice-banner">🎉 كل حضور فعلي في يوم إجازة رسمية (أو ضمن فترة إجازة محددة بالساعة) يضيف ${fmtMoney(DATA.settings.holidayBonus)} جنيه تلقائيًا (قابل للتعديل من الإعدادات).</div>
+    <div class="notice-banner">🎉 كل وردية عمل تتقاطع مع فترة إجازة رسمية (من تاريخ/وقت البداية إلى تاريخ/وقت النهاية) تضيف ${fmtMoney(DATA.settings.holidayBonus)} جنيه تلقائيًا لهذه الوردية (قابل للتعديل من الإعدادات). مثال: إجازة تبدأ 22/7 الساعة 9م وتنتهي 23/7 الساعة 9ص — أي وردية عمل خلال هذا النطاق تُحتسب إجازة، حتى لو كانت ليلية عابرة لمنتصف الليل.</div>
   `;
 }
-function addHolidayModal(){
-  openModal('إضافة إجازة رسمية', `
+function editHoliday(id){
+  const h = id? DATA.holidays.find(x=>x.id===id) : {id:null,name:'',fromDateTime:'',toDateTime:''};
+  openModal(id?'تعديل إجازة رسمية':'إضافة إجازة رسمية', `
     <div class="form-grid">
-      <div class="f-field full"><label>اسم المناسبة</label><input id="f_hname"></div>
-      <div class="f-field full">
-        <label>نوع التحديد</label>
-        <select id="f_htype" onchange="toggleHolidayTypeFields()">
-          <option value="single">يوم واحد</option>
-          <option value="range">فترة (من تاريخ ووقت — إلى تاريخ ووقت)</option>
-        </select>
-      </div>
-      <div class="f-field full" id="f_h_single_wrap"><label>التاريخ</label><input id="f_hdate" type="date"></div>
-      <div class="f-field full" id="f_h_range_wrap" style="display:none;">
-        <label>من تاريخ ووقت</label><input id="f_hfrom" type="datetime-local">
-      </div>
-      <div class="f-field full" id="f_h_range_wrap2" style="display:none;">
-        <label>إلى تاريخ ووقت</label><input id="f_hto" type="datetime-local">
-      </div>
+      <div class="f-field full"><label>اسم المناسبة</label><input id="f_hname" value="${escapeHtml(h.name)}"></div>
+      <div class="f-field"><label>تبدأ من (تاريخ ووقت)</label><input id="f_hfrom" type="datetime-local" value="${h.fromDateTime}"></div>
+      <div class="f-field"><label>تنتهي عند (تاريخ ووقت)</label><input id="f_hto" type="datetime-local" value="${h.toDateTime}"></div>
     </div>
     <div class="f-actions">
-      <button class="btn-sm btn-go" onclick="saveHoliday()">حفظ</button>
+      <button class="btn-sm btn-go" onclick="saveHoliday(${id})">حفظ</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal()">إلغاء</button>
+    </div>
+    <div class="login-hint" style="text-align:right;margin-top:12px;color:#9AA9BA;">مثال: إجازة ثورة يوليو تبدأ 2026-07-22 الساعة 21:00 وتنتهي 2026-07-23 الساعة 09:00. لإجازة يوم كامل عادي، خليها من 00:00 إلى 00:00 اليوم التالي.</div>
+  `);
+}
+async function saveHoliday(id){
+  const name = document.getElementById('f_hname').value.trim();
+  const fromDateTime = document.getElementById('f_hfrom').value;
+  const toDateTime = document.getElementById('f_hto').value;
+  if(!name || !fromDateTime || !toDateTime){ alert('اكتب اسم المناسبة وحدد وقت البداية والنهاية'); return; }
+  if(toDateTime <= fromDateTime){ alert('وقت النهاية لازم يكون بعد وقت البداية'); return; }
+  if(id){ Object.assign(DATA.holidays.find(x=>x.id===id), {name,fromDateTime,toDateTime}); }
+  else{ DATA.holidays.push({id: nextId(DATA.holidays), name,fromDateTime,toDateTime}); }
+  await saveData(); closeModal(); renderHolidaysTab();
+}
+async function deleteHoliday(id){
+  if(!confirm('تأكيد حذف هذه الإجازة؟')) return;
+  DATA.holidays = DATA.holidays.filter(h=>h.id!==id);
+  await saveData(); renderHolidaysTab();
+}
+
+/* ==========================================================
+   ADMIN: MONTHLY EMPLOYEE SCHEDULE GRID
+   Two modes:
+   - "actual": read-only grid rendered from real attendance entries
+   - "plan": editable grid to lay out an upcoming month's schedule
+     (stored separately in DATA.schedule, independent of real entries)
+   ========================================================== */
+let scheduleMonth = null; // 'YYYY-MM'
+let scheduleMode = 'actual'; // 'actual' | 'plan'
+const SCHEDULE_PALETTE = ['#FFD966','#9FC5E8','#93C47D','#F6B26B','#D9A6E0','#B6D7A8','#F4A6A6','#A2C4C9','#EAD1DC','#C9DAF8','#FFE599','#B4A7D6'];
+function colorForScheduleCell(text){
+  if(!text) return '#FFFFFF';
+  if(/^راح/.test(text)) return '#FFFFFF';
+  let hash=0; for(let i=0;i<text.length;i++) hash = (hash*31 + text.charCodeAt(i))>>>0;
+  return SCHEDULE_PALETTE[hash % SCHEDULE_PALETTE.length];
+}
+function daysInMonth(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
+}
+const AR_WEEKDAY_SHORT = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+function renderScheduleTab(){
+  if(!scheduleMonth){ const now = new Date(); scheduleMonth = now.getFullYear()+'-'+pad(now.getMonth()+1); }
+  document.getElementById('content').innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <h3>جدول الموظفين الشهري</h3>
+        <div class="filters">
+          <button class="btn-sm btn-ghost" onclick="scheduleChangeMonth(-1)">◀ الشهر السابق</button>
+          <div class="f-field"><label>الشهر</label><input type="month" id="sch_month" value="${scheduleMonth}" onchange="scheduleSetMonth(this.value)"></div>
+          <button class="btn-sm btn-ghost" onclick="scheduleChangeMonth(1)">الشهر التالي ▶</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="role-tabs" style="max-width:420px;">
+          <button id="schModeActual" class="${scheduleMode==='actual'?'active':''}" onclick="scheduleSetMode('actual')">📋 الحضور الفعلي</button>
+          <button id="schModePlan" class="${scheduleMode==='plan'?'active':''}" onclick="scheduleSetMode('plan')">🗓️ خطة الشهر القادم</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn-sm btn-go" onclick="exportScheduleToPdf()">📄 تحويل PDF</button>
+          ${scheduleMode==='plan'? `<span style="font-size:12px;color:#7A8ba0;align-self:center;">اضغط على أي خانة لتحديد مكان/حالة الموظف في هذا اليوم</span>` : `<span style="font-size:12px;color:#7A8ba0;align-self:center;">معروض من سجلات الحضور الفعلية — للقراءة فقط</span>`}
+        </div>
+      </div>
+    </div>
+    ${scheduleMode==='plan'? `
+    <div class="panel">
+      <div class="panel-head"><h3>تعبئة نطاق أيام (بدل الضغط يوم بيوم)</h3></div>
+      <div class="panel-body filters">
+        <div class="f-field"><label>الموظف</label>
+          <select id="bulk_emp">
+            <option value="__all__">-- كل الموظفين --</option>
+            ${DATA.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="f-field"><label>الحالة / الموقع</label>
+          <select id="bulk_val">${DATA.projects.map(p=>`<option>${escapeHtml(p)}</option>`).join('')}</select>
+        </div>
+        <div class="f-field"><label>من يوم</label><input type="number" id="bulk_from" min="1" max="${daysInMonth(scheduleMonth)}" value="1"></div>
+        <div class="f-field"><label>إلى يوم</label><input type="number" id="bulk_to" min="1" max="${daysInMonth(scheduleMonth)}" value="${daysInMonth(scheduleMonth)}"></div>
+        <button class="btn-sm btn-go" onclick="scheduleBulkApply()">تطبيق</button>
+      </div>
+      <div class="panel-body" style="padding-top:0;">
+        <div class="notice-banner">🤖 أو خلي النظام يوزّع الجميع تلقائيًا بنمط أسبوعي متبادل (أسبوع صباحي / أسبوع مسائي) حسب "الموقع الأساسي" المحدد لكل موظف:
+          <button class="btn-sm btn-teal" style="margin-right:10px;" onclick="openAutoGenerateModal()">⚙️ توليد الجدول تلقائيًا</button>
+        </div>
+      </div>
+    </div>` : ''}
+    <div class="panel">
+      <div class="panel-body table-wrap" id="scheduleGridWrap"></div>
+    </div>
+  `;
+  renderScheduleGridInto('scheduleGridWrap', {editable: scheduleMode==='plan'});
+}
+function scheduleSetMonth(v){ scheduleMonth = v; renderScheduleTab(); }
+function scheduleChangeMonth(delta){
+  const [y,m] = scheduleMonth.split('-').map(Number);
+  let ny=y, nm=m+delta;
+  if(nm<1){nm=12; ny--;} if(nm>12){nm=1; ny++;}
+  scheduleMonth = ny+'-'+pad(nm);
+  renderScheduleTab();
+}
+function scheduleSetMode(mode){ scheduleMode = mode; renderScheduleTab(); }
+function scheduleCellValue(empId, dateStr){
+  if(scheduleMode==='plan'){
+    return DATA.schedule[empId+':'+dateStr] || '';
+  }
+  const dayEntries = DATA.entries.filter(e=>e.employeeId===empId && e.date===dateStr);
+  return dayEntries.length ? dayEntries[0].project||'' : '';
+}
+function buildScheduleGridHtml(opts){
+  opts = opts||{};
+  const n = daysInMonth(scheduleMonth);
+  const [y,m] = scheduleMonth.split('-').map(Number);
+  const emps = DATA.employees.filter(e=>e.active).sort((a,b)=>a.id-b.id);
+  let head = '<th class="sch-name-col">اسم الموظف</th>';
+  for(let d=1; d<=n; d++){
+    const dt = new Date(y, m-1, d);
+    head += `<th class="sch-day-col">${AR_WEEKDAY_SHORT[dt.getDay()]}<br>${d}/${m}</th>`;
+  }
+  let rows = '';
+  emps.forEach(emp=>{
+    let cells = `<td class="sch-name-col">${escapeHtml(emp.name)}</td>`;
+    for(let d=1; d<=n; d++){
+      const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+      const val = scheduleCellValue(emp.id, dateStr);
+      const bg = colorForScheduleCell(val);
+      const clickAttr = opts.editable ? `onclick="openScheduleCellEditor(${emp.id},'${dateStr}')" style="cursor:pointer;background:${bg};"` : `style="background:${bg};"`;
+      cells += `<td class="sch-cell" ${clickAttr}>${escapeHtml(val)}</td>`;
+    }
+    rows += `<tr>${cells}</tr>`;
+  });
+  const bannerRow = opts.extraHeaderRowHtml ? `<tr>${opts.extraHeaderRowHtml.replace('__COLSPAN__', n+1)}</tr>` : '';
+  return `<table class="sch-table"><thead>${bannerRow}<tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderScheduleGridInto(containerId, opts){
+  document.getElementById(containerId).innerHTML = buildScheduleGridHtml(opts);
+}
+function openScheduleCellEditor(empId, dateStr){
+  const current = DATA.schedule[empId+':'+dateStr] || '';
+  openModal('تحديد حالة اليوم', `
+    <div class="f-field full"><label>الحالة / الموقع</label>
+      <select id="sch_val">
+        <option value="">-- فارغ --</option>
+        ${DATA.projects.map(p=>`<option ${current===p?'selected':''}>${escapeHtml(p)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="f-actions">
+      <button class="btn-sm btn-go" onclick="saveScheduleCell(${empId},'${dateStr}')">حفظ</button>
       <button class="btn-sm btn-ghost" onclick="closeModal()">إلغاء</button>
     </div>
   `);
 }
-function toggleHolidayTypeFields(){
-  const type = document.getElementById('f_htype').value;
-  document.getElementById('f_h_single_wrap').style.display = type==='single' ? '' : 'none';
-  document.getElementById('f_h_range_wrap').style.display = type==='range' ? '' : 'none';
-  document.getElementById('f_h_range_wrap2').style.display = type==='range' ? '' : 'none';
+async function saveScheduleCell(empId, dateStr){
+  const val = document.getElementById('sch_val').value;
+  const key = empId+':'+dateStr;
+  if(val) DATA.schedule[key] = val; else delete DATA.schedule[key];
+  await saveData();
+  closeModal();
+  renderScheduleGridInto('scheduleGridWrap', {editable: scheduleMode==='plan'});
 }
-async function saveHoliday(){
-  const name = document.getElementById('f_hname').value.trim();
-  const type = document.getElementById('f_htype').value;
-  if(!name){ alert('من فضلك اكتب اسم المناسبة'); return; }
-  if(type==='range'){
-    const from = document.getElementById('f_hfrom').value;
-    const to = document.getElementById('f_hto').value;
-    if(!from || !to){ alert('من فضلك اختر تاريخ ووقت البداية والنهاية'); return; }
-    if(new Date(to) <= new Date(from)){ alert('تاريخ ووقت النهاية يجب أن يكون بعد البداية'); return; }
-    DATA.holidays.push({name, from, to});
-  }else{
-    const date = document.getElementById('f_hdate').value;
-    if(!date){ alert('من فضلك اختر التاريخ'); return; }
-    DATA.holidays.push({name,date});
+async function scheduleBulkApply(){
+  const empSel = document.getElementById('bulk_emp').value;
+  const val = document.getElementById('bulk_val').value;
+  const n = daysInMonth(scheduleMonth);
+  let from = parseInt(document.getElementById('bulk_from').value)||1;
+  let to = parseInt(document.getElementById('bulk_to').value)||n;
+  if(from<1) from=1; if(to>n) to=n;
+  if(from>to){ alert('يوم البداية لازم يكون قبل أو يساوي يوم النهاية'); return; }
+  const [y,m] = scheduleMonth.split('-').map(Number);
+  const empIds = empSel==='__all__' ? DATA.employees.filter(e=>e.active).map(e=>e.id) : [parseInt(empSel)];
+  for(let d=from; d<=to; d++){
+    const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+    empIds.forEach(empId=>{ DATA.schedule[empId+':'+dateStr] = val; });
   }
-  await saveData(); closeModal(); renderHolidaysTab();
+  await saveData();
+  alert(`تم تعبئة الأيام من ${from} إلى ${to} بـ "${val}"`);
+  renderScheduleGridInto('scheduleGridWrap', {editable: scheduleMode==='plan'});
 }
-async function deleteHoliday(idx){
-  if(!confirm('تأكيد حذف هذه الإجازة؟')) return;
-  DATA.holidays.splice(idx,1);
-  await saveData(); renderHolidaysTab();
+function openAutoGenerateModal(){
+  openModal('توليد الجدول تلقائيًا', `
+    <div class="form-grid">
+      <div class="f-field full"><label>نمط الأسبوع الأول من الشهر</label>
+        <select id="ag_firstweek">
+          <option value="morning">صباحي</option>
+          <option value="evening">مسائي</option>
+        </select>
+      </div>
+      <div class="f-field full"><label>يوم الإجازة الأسبوعية</label>
+        <div style="padding:9px 0;color:#5C6F84;font-size:13px;">${({Sunday:'الأحد',Monday:'الإثنين',Tuesday:'الثلاثاء',Wednesday:'الأربعاء',Thursday:'الخميس',Friday:'الجمعة',Saturday:'السبت'})[DATA.settings.offDay]||DATA.settings.offDay} (من الإعدادات)</div>
+      </div>
+    </div>
+    <div class="notice-banner">
+      هيتوزع تلقائيًا كل موظف نشط له "موقع أساسي" محدد (تبويب الموظفون) على "صباحا [موقعه]" أو "مساءا [موقعه]"، ويتبادل كل أسبوع تقويمي (بداية كل أسبوع من الأحد). يوم الإجازة الأسبوعية يتحدد "راحة" تلقائيًا. هيتم استبدال أي بيانات مُدخلة يدويًا لنفس الموظفين في هذا الشهر.
+    </div>
+    <div class="f-actions">
+      <button class="btn-sm btn-go" onclick="runAutoGenerateSchedule()">توليد الآن</button>
+      <button class="btn-sm btn-ghost" onclick="closeModal()">إلغاء</button>
+    </div>
+  `);
+}
+const AR_DAY_TO_JS = {Sunday:0, Monday:1, Tuesday:2, Wednesday:3, Thursday:4, Friday:5, Saturday:6};
+async function runAutoGenerateSchedule(){
+  const firstWeekMorning = document.getElementById('ag_firstweek').value==='morning';
+  const offDayIdx = AR_DAY_TO_JS[DATA.settings.offDay] ?? 5;
+  const [y,m] = scheduleMonth.split('-').map(Number);
+  const n = daysInMonth(scheduleMonth);
+  const emps = DATA.employees.filter(e=>e.active && e.baseLocation);
+  if(!emps.length){ alert('محدش من الموظفين له "موقع أساسي" محدد — روح تبويب الموظفون وحدده أولًا.'); return; }
+  const missingProjects = new Set();
+  for(let d=1; d<=n; d++){
+    const date = new Date(y, m-1, d);
+    const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+    if(date.getDay()===offDayIdx){
+      emps.forEach(emp=>{ DATA.schedule[emp.id+':'+dateStr] = 'راحه'; });
+      continue;
+    }
+    // Week number within the month: count how many Sundays have occurred up to and including day d,
+    // then alternate morning/evening each time that count is even/odd.
+    let sundaysSoFar = 0;
+    for(let dd=1; dd<=d; dd++){ if(new Date(y,m-1,dd).getDay()===0) sundaysSoFar++; }
+    const isMorningWeek = (sundaysSoFar % 2 === 0) ? firstWeekMorning : !firstWeekMorning;
+    emps.forEach(emp=>{
+      const label = (isMorningWeek? 'صباحا ' : 'مساءا ') + emp.baseLocation;
+      if(!DATA.projects.includes(label)) missingProjects.add(label);
+      DATA.schedule[emp.id+':'+dateStr] = label;
+    });
+  }
+  await saveData();
+  closeModal();
+  if(missingProjects.size){
+    alert('تم التوليد، لكن هذه القيم مش موجودة في قائمة "المشاريع/المواقع" فهتظهر بدون لون مميز: '+Array.from(missingProjects).join('، ')+'\\nينصح بإضافتها من تبويب المشاريع.');
+  }else{
+    alert('تم توليد جدول الشهر تلقائيًا لكل الموظفين اللي ليهم موقع أساسي محدد.');
+  }
+  renderScheduleTab();
+}
+function exportScheduleToPdf(){
+  const win = window.open('', '_blank');
+  if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
+  const [y,m] = scheduleMonth.split('-').map(Number);
+  const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const titleLabel = scheduleMode==='plan' ? 'خطة الشهر' : 'جدول الحضور الفعلي';
+  // The logo/title banner lives INSIDE the table's <thead> (not a separate page div) so that
+  // browsers automatically repeat it at the top of every printed page when the table spans pages.
+  const bannerCellHtml = `<th colspan="__COLSPAN__" class="pdf-banner">
+      <div class="pdf-banner-inner">
+        <img src="data:image/png;base64,${LOGO_SMALL_B64}">
+        <div><div class="pdf-title">IFT Corporation — ${titleLabel}</div><div class="pdf-sub">${monthNames[m-1]} ${y}</div></div>
+      </div>
+    </th>`;
+  const gridHtml = buildScheduleGridHtml({editable:false, extraHeaderRowHtml: bannerCellHtml});
+  // Build a color legend from the values actually shown in the grid
+  const usedValues = new Set();
+  DATA.employees.filter(e=>e.active).forEach(emp=>{
+    const n = daysInMonth(scheduleMonth);
+    for(let d=1; d<=n; d++){
+      const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+      const v = scheduleCellValue(emp.id, dateStr);
+      if(v) usedValues.add(v);
+    }
+  });
+  const legendHtml = Array.from(usedValues).map(v=>`<span class="leg-item"><span class="leg-swatch" style="background:${colorForScheduleCell(v)}"></span>${escapeHtml(v)}</span>`).join('');
+  const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+    <title>${titleLabel} — ${monthNames[m-1]} ${y}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+      *{box-sizing:border-box;}
+      html,body{margin:0;padding:0;}
+      body{font-family:'Cairo',Tahoma,Arial,sans-serif;color:#0B2A4A;}
+      .legend{display:flex;flex-wrap:wrap;gap:10px;padding:8px 10mm 4px;font-size:9px;}
+      .leg-item{display:flex;align-items:center;gap:4px;}
+      .leg-swatch{width:11px;height:11px;border-radius:3px;border:1px solid #ccc;display:inline-block;}
+      table.sch-table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9px;}
+      table.sch-table th, table.sch-table td{border:1px solid #ccc;padding:3px 2px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+      table.sch-table thead{display:table-header-group;}
+      table.sch-table tr{page-break-inside:avoid;}
+      .pdf-banner{border:none !important;padding:0 !important;background:#fff;}
+      .pdf-banner-inner{display:flex;align-items:center;gap:12px;padding:8px 10mm;border-bottom:3px solid #003A72;}
+      .pdf-banner-inner img{width:40px;height:40px;border-radius:50%;flex:none;}
+      .pdf-title{font-size:15px;font-weight:800;color:#003A72;}
+      .pdf-sub{font-size:11px;color:#5C6F84;margin-top:2px;}
+      .sch-name-col{position:sticky;right:0;background:#EEF2F6;text-align:right !important;width:110px;font-weight:700;}
+      .sch-day-col, .sch-cell{width:calc((100% - 110px)/31);}
+      .footer{padding:8px 10mm 14px;font-size:9px;color:#8A97A6;text-align:center;}
+      @page{ size: A3 landscape; margin: 8mm; }
+      @media print{
+        body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      }
+    </style></head><body>
+    <div class="legend">${legendHtml}</div>
+    ${gridHtml}
+    <div class="footer">IFT Corporation — تم إصدار هذا الجدول تلقائيًا من نظام الحضور والانصراف</div>
+  </body></html>`;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ try{ win.print(); }catch(e){} }, 500);
 }
 
 /* ==========================================================
@@ -2204,10 +2471,12 @@ async function forceLeaveStatus(id, status){
    ========================================================== */
 let settingsRatesDraft = null;
 let settingsLeaveTypesDraft = null;
+let settingsLocGroupsDraft = null;
 function renderSettingsTab(){
   const s = DATA.settings;
   settingsRatesDraft = JSON.parse(JSON.stringify(s.transportRates||[]));
   settingsLeaveTypesDraft = JSON.parse(JSON.stringify(s.leaveTypes||[]));
+  settingsLocGroupsDraft = JSON.parse(JSON.stringify(s.locationGroups||[]));
   document.getElementById('content').innerHTML = `
     <div class="panel">
       <div class="panel-head"><h3>ساعات العمل والأوفر تايم</h3></div>
@@ -2269,6 +2538,16 @@ function renderSettingsTab(){
     </div>
 
     <div class="panel">
+      <div class="panel-head"><h3>المواقع الأساسية (لتوليد جدول الشهر تلقائيًا)</h3></div>
+      <div class="panel-body">
+        <div id="locGroupsWrap"></div>
+        <button class="btn-sm btn-teal" onclick="addLocGroupRow()">+ إضافة موقع</button>
+        <div class="f-actions"><button class="btn-sm btn-go" onclick="saveLocGroups()">حفظ المواقع</button></div>
+        <div class="login-hint" style="text-align:right;color:#9AA9BA;margin-top:10px;">كل موقع هنا لازم يكون له مشروعين في قائمة "المشاريع/المواقع" بصيغة "صباحا [الموقع]" و"مساءا [الموقع]" حتى يشتغل التوليد التلقائي صح. حدد الموقع الأساسي لكل موظف من تبويب "الموظفون".</div>
+      </div>
+    </div>
+
+    <div class="panel">
       <div class="panel-head"><h3>تغيير كلمة مرور المسؤول</h3></div>
       <div class="panel-body">
         <div class="form-grid">
@@ -2285,6 +2564,7 @@ function renderSettingsTab(){
   `;
   renderRateRows();
   renderLeaveTypeRows();
+  renderLocGroupRows();
 }
 async function saveAnnualBonusSettings(){
   DATA.settings.annualBonus = {
@@ -2327,6 +2607,21 @@ async function saveLeaveTypes(){
   DATA.settings.leaveTypes = settingsLeaveTypesDraft.filter(t=>t.trim()!=='');
   await saveData();
   alert('تم حفظ أنواع الإجازات');
+  renderSettingsTab();
+}
+function renderLocGroupRows(){
+  document.getElementById('locGroupsWrap').innerHTML = settingsLocGroupsDraft.map((t,i)=>`
+    <div class="rate-row">
+      <input value="${escapeHtml(t)}" placeholder="اسم الموقع (مثال: التجمع)" oninput="settingsLocGroupsDraft[${i}]=this.value">
+      <button class="rm" onclick="removeLocGroupRow(${i})">حذف</button>
+    </div>`).join('') || `<div class="empty-state" style="padding:14px;"><div class="ico">📍</div>لا توجد مواقع مضافة</div>`;
+}
+function addLocGroupRow(){ settingsLocGroupsDraft.push(''); renderLocGroupRows(); }
+function removeLocGroupRow(i){ settingsLocGroupsDraft.splice(i,1); renderLocGroupRows(); }
+async function saveLocGroups(){
+  DATA.settings.locationGroups = settingsLocGroupsDraft.filter(t=>t.trim()!=='');
+  await saveData();
+  alert('تم حفظ المواقع الأساسية');
   renderSettingsTab();
 }
 async function saveSettingsGeneral(){
