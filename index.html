@@ -555,7 +555,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="adminPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول كمسؤول</button>
-        <div class="login-hint">محمد المعداوى: <b class="mono">01003459541</b> — يتليفون.</div>
+        <div class="login-hint">تليفون: <b class="mono">01003459541</b> — Mohamed El-Madawy.</div>
       </div>
 
       <div id="securityLoginForm" style="display:none;">
@@ -568,7 +568,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="securityPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doSecurityLogin()">دخول كأمن</button>
-        <div class="login-hint">: <b class="mono">فقط</b> / <b class="mono">من فضلك اخل اليوزنيم والباسورد</b> — أمن.</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">sec123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
       </div>
 
       <div id="supLoginForm" style="display:none;">
@@ -594,7 +594,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="leadPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doLeadLogin()">دخول كمدير</button>
-        <div class="login-hint">: <b class="mono">lead1</b> / <b class="mono"></b> —  "المدراء (Leads)".</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">lead1</b> / <b class="mono">lead123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المدير (Leads)".</div>
       </div>
 
       <div id="empLoginForm" style="display:none;">
@@ -603,11 +603,11 @@ tr:hover td{background:#FAFBFC;}
           <select id="empSelect"></select>
         </div>
         <div class="field">
-          <label>ا00</label>
+          <label>الرقم السري (آخر 4 أرقام من رقم الهاتف)</label>
           <input type="password" inputmode="numeric" maxlength="10" id="empPinInput" placeholder="••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doEmpLogin()">دخول</button>
-        <div class="login-hint">ادخل الباسورد: 000</div>
+        <div class="login-hint">مثال: لو رقم هاتفك 01001770079 فالرقم السري هو 0079.</div>
       </div>
     </div>
   </div>
@@ -1046,14 +1046,14 @@ function computePeriodFinancials(employeeId, from, to){
       otPay += p.otPay;
     }
   });
-  const byDate = {};
-  entries.forEach(e=>{ (byDate[e.date] ||= []).push(e); });
+  // Transport allowance is counted per trip (per entry), not once per day —
+  // so if a colleague works more than one shift/location in the same day
+  // (e.g. Airport 9am-1pm then Tagamoa 1:30pm-5pm) each leg is added on its own.
   let transportTotal=0; const transportDays=[];
-  Object.keys(byDate).sort().forEach(date=>{
-    const dayEntries = byDate[date];
-    const proj = dayEntries[0].project||'';
+  entries.slice().sort((a,b)=> (a.date+(a.timeIn||'')).localeCompare(b.date+(b.timeIn||''))).forEach(e=>{
+    const proj = e.project||'';
     const rate = transportRateFor(proj);
-    if(rate>0){ transportTotal+=rate; transportDays.push({date,project:proj,amount:rate}); }
+    if(rate>0){ transportTotal+=rate; transportDays.push({date:e.date, project:proj, amount:rate, timeIn:e.timeIn, timeOut:e.timeOut}); }
   });
   // Holiday bonus: granted once per shift (entry) whose actual worked time overlaps
   // a holiday's from→to window — not just "same calendar date" — so shifts like
@@ -1091,9 +1091,8 @@ function computeDaySummary(dateStr){
       const h=computeEntryHours(e); const p=computeEntryPay(e);
       if(!p.isFlat){ otHours+=h.ot; otPay += p.otPay; }
       if(findOverlappingHoliday(e)) holidayTotal += (DATA.settings.holidayBonus||0);
+      transportTotal += transportRateFor(e.project||'');
     });
-    const proj = list[0].project||'';
-    transportTotal += transportRateFor(proj);
   });
   return {otHours,otPay,transportTotal,holidayTotal, headcount:Object.keys(byEmp).length};
 }
@@ -1256,7 +1255,7 @@ function enterApp(){
       {id:'holidays', ico:'📅', label:'الإجازات الرسمية'},
       {id:'scheduleGrid', ico:'🗓️', label:'جدول الموظفين الشهري'},
       {id:'supervisors', ico:'🛡️', label:'المشرفون'},
-      {id:'leads', ico:'🧭', label:'المدراء (Leads)'},
+      {id:'leads', ico:'🧭', label:'المدير (Leads)'},
       {id:'security', ico:'👮', label:'الأمن'},
       {id:'settings', ico:'⚙️', label:'الإعدادات'},
     ]);
@@ -1348,7 +1347,7 @@ function switchTab(tab){
     holidays:['الإجازات الرسمية','إدارة أيام العطلات الرسمية'],
     scheduleGrid:['جدول الموظفين الشهري','عرض الحضور الفعلي أو إعداد خطة للشهر القادم'],
     supervisors:['المشرفون','إدارة حسابات مشرفي الورديات'],
-    leads:['المدراء (Leads)','إدارة حسابات مدراء المشرفين'],
+    leads:['المدير (Leads)','إدارة حسابات مدراء المشرفين'],
     security:['الأمن','إدارة حسابات نقاط الأمن'],
     settings:['الإعدادات','قيم الأجور والبدلات والحوافز'],
     clock:['تسجيل حضور / انصراف','بصمة اليوم'],
@@ -2168,7 +2167,7 @@ function renderLeadsTab(){
   document.getElementById('content').innerHTML = `
     <div class="panel">
       <div class="panel-head">
-        <h3>حسابات المدراء (Leads) <span class="badge-count">${DATA.leads.length}</span></h3>
+        <h3>حسابات المدير (Leads) <span class="badge-count">${DATA.leads.length}</span></h3>
         <button class="btn-sm btn-go" onclick="editLead(null)">+ إضافة مدير</button>
       </div>
       <div class="panel-body table-wrap">
@@ -2759,7 +2758,7 @@ function renderSettingsTab(){
       </div>
     </div>
     <div class="notice-banner">
-      🔑 أماكن تعديل كلمات المرور والأرقام السرية: كلمة مرور المسؤول (هنا)، كلمة مرور كل مشرف وردية أو مدير (تبويب "المشرفون" / "المدراء" → تعديل)، والرقم السري لكل موظف (تبويب "الموظفون" → تعديل).
+      🔑 أماكن تعديل كلمات المرور والأرقام السرية: كلمة مرور المسؤول (هنا)، كلمة مرور كل مشرف وردية أو مدير (تبويب "المشرفون" / "المدير" → تعديل)، والرقم السري لكل موظف (تبويب "الموظفون" → تعديل).
     </div>
     <div class="notice-banner">ملحوظة: بيانات هذا التطبيق (الموظفون، السجلات، التقييمات، كلمات المرور) محفوظة بشكل مشترك ويمكن لأي شخص يفتح هذا الـ Artifact الوصول إليها — تجنّب استخدام كلمات مرور حساسة.</div>
   `;
@@ -3186,7 +3185,7 @@ function renderFinancialBreakdown(employeeId, from, to, containerId){
           <li><span>أجر الساعات العادية</span><b class="mono">${fmtMoney(f.regPay - f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</b></li>
           <li><span>أجر أيام الجمعة/الخميس الليلي الثابت (${f.flatPayDays.length} يوم)</span><b class="mono">${fmtMoney(f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</b></li>
           <li><span>قيمة الأوفر تايم (${fmtHrs(f.otHours)} س × ${fmtMoney(DATA.settings.otHourlyRate)})</span><b class="mono">${fmtMoney(f.otPay)}</b></li>
-          <li><span>بدل الانتقال (${f.transportDays.length} يوم)</span><b class="mono">${fmtMoney(f.transportTotal)}</b></li>
+          <li><span>بدل الانتقال (${f.transportDays.length} رحلة)</span><b class="mono">${fmtMoney(f.transportTotal)}</b></li>
           <li><span>مستحقات العمل في الإجازات (${f.holidayDays.length} يوم × ${fmtMoney(DATA.settings.holidayBonus)})</span><b class="mono">${fmtMoney(f.holidayTotal)}</b></li>
           <li><span>قيمة الحافز الشهري</span><b class="mono">${fmtMoney(f.incentiveTotal)}</b></li>
         </ul>
@@ -3215,7 +3214,7 @@ function renderFinancialBreakdown(employeeId, from, to, containerId){
       <div class="panel-body table-wrap">
         ${(f.transportDays.length||f.holidayDays.length||f.flatPayDays.length) ? `<table><thead><tr><th>التاريخ</th><th>النوع</th><th>التفاصيل</th><th>القيمة</th></tr></thead>
         <tbody>
-          ${f.transportDays.map(t=>`<tr><td class="mono">${t.date}</td><td>بدل انتقال</td><td>${escapeHtml(t.project)}</td><td class="mono">${fmtMoney(t.amount)}</td></tr>`).join('')}
+          ${f.transportDays.map(t=>`<tr><td class="mono">${t.date}${t.timeIn?` (${t.timeIn}-${t.timeOut||''})`:''}</td><td>بدل انتقال</td><td>${escapeHtml(t.project)}</td><td class="mono">${fmtMoney(t.amount)}</td></tr>`).join('')}
           ${f.holidayDays.map(h=>`<tr><td class="mono">${h.date}</td><td>عمل بإجازة</td><td>${escapeHtml(h.name)}</td><td class="mono">${fmtMoney(DATA.settings.holidayBonus)}</td></tr>`).join('')}
           ${f.flatPayDays.map(fp=>`<tr><td class="mono">${fp.date}</td><td>يوم أجر ثابت</td><td>${escapeHtml(fp.label)}</td><td class="mono">${fmtMoney(fp.amount)}</td></tr>`).join('')}
         </tbody></table>` : `<div class="empty-state">لا توجد بدلات انتقال أو أيام إجازة عمل ضمن الفترة</div>`}
@@ -3238,16 +3237,43 @@ function renderFinancialTab(){
       </div>
     </div>
     <div class="panel" style="margin-top:16px;">
-      <div class="panel-head"><h3>التقرير الشهري لكل الموظفين (PDF)</h3></div>
+      <div class="panel-head"><h3>التقرير الشهري لكل الموظفين</h3></div>
       <div class="panel-body filters">
         <div class="f-field"><label>من تاريخ</label><input type="date" id="monthly_from" value="${period.from}"></div>
         <div class="f-field"><label>إلى تاريخ</label><input type="date" id="monthly_to" value="${period.to}"></div>
+        <button class="btn-sm btn-go" onclick="loadMonthlyAllowancesTable()">عرض</button>
         <button class="btn-sm btn-teal" onclick="printMonthlyAllowancesReportPdfFromInputs()">🖨️ تحويل PDF</button>
       </div>
+      <div class="panel-body table-wrap" id="monthlyAllowancesWrap"></div>
     </div>
     <div id="finResultsWrap"></div>
   `;
   loadFinancialResults();
+  loadMonthlyAllowancesTable();
+}
+function loadMonthlyAllowancesTable(){
+  const from = document.getElementById('monthly_from').value;
+  const to = document.getElementById('monthly_to').value;
+  const wrapEl = document.getElementById('monthlyAllowancesWrap');
+  if(!from || !to){ wrapEl.innerHTML = `<div class="empty-state">اختر الفترة أولًا</div>`; return; }
+  const employees = DATA.employees.filter(e=>e.active).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  let sumFlat = 0, sumTotal = 0;
+  const rows = employees.map(emp=>{
+    const f = computePeriodFinancials(emp.id, from, to);
+    const flatPayTotal = f.flatPayDays.reduce((s,x)=>s+x.amount,0); // Friday / Thursday-night fixed-day pay
+    sumFlat += flatPayTotal; sumTotal += f.grandTotal;
+    return `<tr>
+      <td class="name-cell">${getAvatarHtml(emp.name,emp.photo,'avatar-sm')} ${escapeHtml(emp.name)}</td>
+      <td class="mono">${f.flatPayDays.length}</td>
+      <td class="mono">${fmtMoney(flatPayTotal)}</td>
+      <td class="mono">${fmtMoney(f.grandTotal)}</td>
+    </tr>`;
+  }).join('');
+  wrapEl.innerHTML = employees.length ? `<table>
+    <thead><tr><th>اسم الزميل</th><th>عدد أيام الجمعة/الخميس الليلي الثابت</th><th>أجر أيام الجمعة/الخميس الليلي الثابت</th><th>إجمالي المستحقات</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td style="font-weight:800;">الإجمالي العام</td><td></td><td class="mono" style="font-weight:800;">${fmtMoney(sumFlat)}</td><td class="mono" style="font-weight:800;">${fmtMoney(sumTotal)}</td></tr></tfoot>
+  </table>` : `<div class="empty-state">لا يوجد موظفون نشطون</div>`;
 }
 function loadFinancialResults(){
   const empId = parseInt(document.getElementById('fin_emp').value);
@@ -3431,7 +3457,7 @@ function printFinancialReportPdf(employeeId, from, to){
   if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
   const rowsEval = f.evalMonths.map(m=>`<tr><td>${m.month}</td><td>${m.score!==null?fmtHrs(m.score):'لم يتم التقييم'}</td><td>${fmtHrs(m.percent)}%</td><td>${fmtMoney(m.value)}</td></tr>`).join('');
   const rowsExtra = [
-    ...f.transportDays.map(t=>`<tr><td>${t.date}</td><td>بدل انتقال</td><td>${escapeHtml(t.project)}</td><td>${fmtMoney(t.amount)}</td></tr>`),
+    ...f.transportDays.map(t=>`<tr><td>${t.date}${t.timeIn?` (${t.timeIn}-${t.timeOut||''})`:''}</td><td>بدل انتقال</td><td>${escapeHtml(t.project)}</td><td>${fmtMoney(t.amount)}</td></tr>`),
     ...f.holidayDays.map(h=>`<tr><td>${h.date}</td><td>عمل في إجازة رسمية</td><td>${escapeHtml(h.name)}</td><td>${fmtMoney(DATA.settings.holidayBonus)}</td></tr>`),
     ...f.flatPayDays.map(fp=>`<tr><td>${fp.date}</td><td>يوم أجر ثابت</td><td>${escapeHtml(fp.label)}</td><td>${fmtMoney(fp.amount)}</td></tr>`)
   ].join('') || `<tr><td colspan="4">لا توجد بيانات في هذه الفترة</td></tr>`;
@@ -3472,7 +3498,7 @@ function printFinancialReportPdf(employeeId, from, to){
       <tr><td>أجر الساعات العادية (${fmtHrs(f.regHours)} ساعة)</td><td>${fmtMoney(f.regPay - f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</td></tr>
       <tr><td>أجر أيام الجمعة/الخميس الليلي الثابت (${f.flatPayDays.length} يوم)</td><td>${fmtMoney(f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</td></tr>
       <tr><td>قيمة الأوفر تايم (${fmtHrs(f.otHours)} ساعة × ${fmtMoney(DATA.settings.otHourlyRate)})</td><td>${fmtMoney(f.otPay)}</td></tr>
-      <tr><td>بدل الانتقال (${f.transportDays.length} يوم)</td><td>${fmtMoney(f.transportTotal)}</td></tr>
+      <tr><td>بدل الانتقال (${f.transportDays.length} رحلة)</td><td>${fmtMoney(f.transportTotal)}</td></tr>
       <tr><td>مستحقات العمل في الإجازات (${f.holidayDays.length} يوم)</td><td>${fmtMoney(f.holidayTotal)}</td></tr>
       <tr><td>قيمة الحافز الشهري</td><td>${fmtMoney(f.incentiveTotal)}</td></tr>
     </table>
@@ -3502,12 +3528,13 @@ function printMonthlyAllowancesReportPdf(from, to){
   const win = window.open('', '_blank');
   if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
 
-  let sumTransport=0, sumOt=0, sumIncentive=0, sumTotal=0;
+  let sumTransport=0, sumOt=0, sumFlat=0, sumIncentive=0, sumTotal=0;
   const rows = employees.map(emp=>{
     const f = computePeriodFinancials(emp.id, from, to);
     const otPlusHoliday = f.otPay + f.holidayTotal; // overtime amount now includes leave/holiday-day pay
-    const total = f.transportTotal + otPlusHoliday + f.incentiveTotal;
-    sumTransport += f.transportTotal; sumOt += otPlusHoliday; sumIncentive += f.incentiveTotal; sumTotal += total;
+    const flatPayTotal = f.flatPayDays.reduce((s,x)=>s+x.amount,0); // Friday / Thursday-night fixed-day pay
+    const total = f.transportTotal + otPlusHoliday + flatPayTotal + f.incentiveTotal;
+    sumTransport += f.transportTotal; sumOt += otPlusHoliday; sumFlat += flatPayTotal; sumIncentive += f.incentiveTotal; sumTotal += total;
     const avatar = emp.photo
       ? `<img src="${emp.photo}" class="ph">`
       : `<div class="ph ph-initial">${escapeHtml((emp.name||'?').trim().charAt(0)||'?')}</div>`;
@@ -3515,6 +3542,7 @@ function printMonthlyAllowancesReportPdf(from, to){
       <td class="name-cell">${avatar}<span>${escapeHtml(emp.name)}</span></td>
       <td class="mono">${fmtMoney(f.transportTotal)}</td>
       <td class="mono">${fmtMoney(otPlusHoliday)}</td>
+      <td class="mono">${fmtMoney(flatPayTotal)}</td>
       <td class="mono">${fmtMoney(f.incentiveTotal)}</td>
       <td class="mono tot">${fmtMoney(total)}</td>
     </tr>`;
@@ -3549,9 +3577,9 @@ function printMonthlyAllowancesReportPdf(from, to){
       <div><h1>IFT Corporation — التقرير الشهري لمستحقات الموظفين</h1><div class="sub">الفترة من ${from} إلى ${to}</div></div>
     </div>
     <table>
-      <thead><tr><th>اسم الزميل</th><th>مبلغ بدل الانتقالات</th><th>مبلغ الأوفر تايم + الإجازات</th><th>مبلغ الحافز الشهري</th><th>الإجمالي</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="5" style="text-align:center;">لا يوجد موظفون نشطون</td></tr>`}</tbody>
-      <tfoot><tr><td>الإجمالي العام</td><td class="mono">${fmtMoney(sumTransport)}</td><td class="mono">${fmtMoney(sumOt)}</td><td class="mono">${fmtMoney(sumIncentive)}</td><td class="mono">${fmtMoney(sumTotal)}</td></tr></tfoot>
+      <thead><tr><th>اسم الزميل</th><th>مبلغ بدل الانتقالات</th><th>مبلغ الأوفر تايم + الإجازات</th><th>أجر الجمعة/الخميس الليلي الثابت</th><th>مبلغ الحافز الشهري</th><th>الإجمالي</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="6" style="text-align:center;">لا يوجد موظفون نشطون</td></tr>`}</tbody>
+      <tfoot><tr><td>الإجمالي العام</td><td class="mono">${fmtMoney(sumTransport)}</td><td class="mono">${fmtMoney(sumOt)}</td><td class="mono">${fmtMoney(sumFlat)}</td><td class="mono">${fmtMoney(sumIncentive)}</td><td class="mono">${fmtMoney(sumTotal)}</td></tr></tfoot>
     </table>
     <div class="footer">IFT Corporation — تم إصدار هذا التقرير تلقائيًا من نظام الحضور والانصراف</div>
   </body></html>`;
