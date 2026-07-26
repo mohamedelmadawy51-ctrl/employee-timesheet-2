@@ -555,7 +555,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="adminPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول كمسؤول</button>
-        <div class="login-hint">محمد المعداوى: <b class="mono">01003459541</b> —تليغون  </div>
+        <div class="login-hint">كلمة المرور الافتراضية: <b class="mono">admin123</b> — يفضّل تغييرها من الإعدادات بعد أول دخول.</div>
       </div>
 
       <div id="securityLoginForm" style="display:none;">
@@ -1256,7 +1256,7 @@ function enterApp(){
       {id:'holidays', ico:'📅', label:'الإجازات الرسمية'},
       {id:'scheduleGrid', ico:'🗓️', label:'جدول الموظفين الشهري'},
       {id:'supervisors', ico:'🛡️', label:'المشرفون'},
-      {id:'leads', ico:'🧭', label:'المدير (Leads)'},
+      {id:'leads', ico:'🧭', label:'المدراء (Leads)'},
       {id:'security', ico:'👮', label:'الأمن'},
       {id:'settings', ico:'⚙️', label:'الإعدادات'},
     ]);
@@ -2293,6 +2293,10 @@ function renderKioskTab(){
         <div class="punch-clock-big mono" id="punchClockBig">00:00:00</div>
         <div class="punch-date" id="punchDateBig">—</div>
         <div class="punch-project">
+          <label>التاريخ (لتسجيل حضور يوم سابق لو لزم)</label>
+          <input type="date" id="kioskDate" value="${todayStr()}" max="${todayStr()}" onchange="renderKioskStatus()">
+        </div>
+        <div class="punch-project">
           <label>اختر الموظف</label>
           <select id="kioskEmp" onchange="renderKioskStatus()">
             ${activeEmps.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.type)}</option>`).join('')}
@@ -2313,8 +2317,35 @@ function renderKioskTab(){
 function renderKioskStatus(){
   const wrap = document.getElementById('kioskStatusWrap');
   const empId = parseInt(document.getElementById('kioskEmp').value);
+  const dateSel = document.getElementById('kioskDate').value || todayStr();
   const emp = empById(empId);
   if(!emp || !wrap) return;
+  const isToday = dateSel === todayStr();
+  if(!isToday){
+    // Registering/correcting attendance for a past date: show existing records for that
+    // day plus a form to add a full (in + out) record, instead of the live in/out toggle.
+    const dayEntries = DATA.entries.filter(x=>x.employeeId===emp.id && x.date===dateSel);
+    wrap.innerHTML = `
+      <div class="punch-avatar">${getAvatarHtml(emp.name, emp.photo, 'avatar-lg')}</div>
+      <div class="punch-status out" style="margin-top:10px;">📅 تسجيل حضور بتاريخ سابق: ${dateSel}</div>
+      ${dayEntries.length? `
+      <div style="margin-top:10px;text-align:right;">
+        <div style="font-size:11.5px;color:var(--text-dim);margin-bottom:6px;">سجلات هذا اليوم للموظف:</div>
+        ${dayEntries.map(x=>`
+          <div class="mini-stat">
+            <div class="k">${x.timeIn||'—'} ← ${x.timeOut||'لسه شغال'} ${x.project?'· '+escapeHtml(x.project):''}</div>
+            <div class="v" style="display:flex;gap:6px;">
+              <button class="btn-sm btn-ghost" onclick="editEntry(${x.id},'kiosk')">✏️</button>
+              <button class="btn-sm btn-ghost" onclick="deleteEntry(${x.id},'kiosk')">🗑️</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>` : `<div style="font-size:11.5px;color:var(--text-dim);margin-top:8px;">لا يوجد أي سجل لهذا الموظف في هذا التاريخ بعد.</div>`}
+      <button class="punch-btn ready" style="margin-top:12px;" onclick="addEntryModal('kiosk', {employeeId: ${emp.id}, date: '${dateSel}'})">➕ إضافة تسجيل حضور/انصراف لهذا التاريخ</button>
+      <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;">استخدم ده لو الموظف اتنسى يسجل حضوره وانصرافه في يوم فات — اختار الوقتين مباشرة وهيتسجلوا على طول.</div>
+    `;
+    return;
+  }
   const open = openEntryFor(emp.id);
   wrap.innerHTML = `
     <div class="punch-avatar">${getAvatarHtml(emp.name, emp.photo, 'avatar-lg')}</div>
@@ -2929,10 +2960,11 @@ function exportEntriesToExcel(){
   const stamp = (from||'الكل')+'_'+(to||'الكل');
   XLSX.writeFile(wb, `سجلات_الحضور_${stamp}.xlsx`);
 }
-function addEntryModal(){ entryModal(null); }
-function editEntry(id){ entryModal(id); }
-function entryModal(id){
-  const e = id? DATA.entries.find(x=>x.id===id) : {employeeId:'', date:todayStr(), timeIn:'', timeOut:'', project:'', notes:''};
+let _entryModalReturn = 'entries';
+function addEntryModal(returnTo, presets){ _entryModalReturn = returnTo||'entries'; entryModal(null, presets); }
+function editEntry(id, returnTo){ _entryModalReturn = returnTo||'entries'; entryModal(id); }
+function entryModal(id, presets){
+  const e = id? DATA.entries.find(x=>x.id===id) : Object.assign({employeeId:'', date:todayStr(), timeIn:'', timeOut:'', project:'', notes:''}, presets||{});
   openModal(id?'تعديل سجل':'إضافة سجل يدويًا', `
     <div class="form-grid">
       <div class="f-field full"><label>الموظف</label>
@@ -2963,12 +2995,14 @@ async function saveEntry(id){
   if(timeOut && timeOut===timeIn){ alert('وقت الدخول والخروج متطابقان — من فضلك تأكد من الوقت الصحيح.'); return; }
   if(id){ Object.assign(DATA.entries.find(x=>x.id===id), {employeeId,date,project,timeIn,timeOut:timeOut||null,notes}); }
   else{ DATA.entries.push({id: nextId(DATA.entries), employeeId,date,project,timeIn,timeOut:timeOut||null,notes}); }
-  await saveData(); closeModal(); renderEntriesTab();
+  await saveData(); closeModal();
+  if(_entryModalReturn==='kiosk'){ renderKioskStatus(); renderKioskPresentList(); } else { renderEntriesTab(); }
 }
-async function deleteEntry(id){
+async function deleteEntry(id, returnTo){
   if(!confirm('تأكيد حذف هذا السجل؟')) return;
   DATA.entries = DATA.entries.filter(e=>e.id!==id);
-  await saveData(); renderEntriesTab();
+  await saveData();
+  if(returnTo==='kiosk'){ renderKioskStatus(); renderKioskPresentList(); } else { renderEntriesTab(); }
 }
 
 /* ==========================================================
