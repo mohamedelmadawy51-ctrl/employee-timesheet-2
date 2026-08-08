@@ -366,6 +366,10 @@ tr:hover td{background:#FAFBFC;}
 .sch-day-col{min-width:46px;}
 .sch-cell{min-width:46px;transition:filter .1s;font-size:9.5px;white-space:normal;line-height:1.2;}
 .sch-cell:hover{filter:brightness(0.93);}
+.diff-cell{display:flex;flex-direction:column;gap:1px;font-size:9px;line-height:1.15;}
+.diff-cell .diff-plan{color:#003A72;font-weight:700;}
+.diff-cell .diff-sep{color:#B91C1C;font-size:8px;}
+.diff-cell .diff-actual{color:#B91C1C;font-weight:700;}
 .sch-emp-cell{display:flex;align-items:center;gap:6px;}
 .sch-emp-cell img, .sch-emp-cell .sch-emp-initial{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:none;background:var(--navy-3);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
 .sch-emp-cell .sch-emp-name{overflow:hidden;text-overflow:ellipsis;font-size:11px;}
@@ -556,7 +560,7 @@ td.name-cell{width:1%;white-space:nowrap;}
           <input type="password" id="adminPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول كمسؤول</button>
-        <div class="login-hint">تليفون: <b class="mono">01003459541</b> — محمد المعداوى.</div>
+        <div class="login-hint">رقم التليفون: <b class="mono">01003459541</b> — محمد المعداوي.</div>
       </div>
 
       <div id="securityLoginForm" style="display:none;">
@@ -1732,16 +1736,17 @@ function renderScheduleTab(){
         </div>
       </div>
       <div class="panel-body">
-        <div class="role-tabs" style="max-width:420px;">
+        <div class="role-tabs" style="max-width:620px;">
           <button id="schModeActual" class="${scheduleMode==='actual'?'active':''}" onclick="scheduleSetMode('actual')">📋 الحضور الفعلي</button>
           <button id="schModePlan" class="${scheduleMode==='plan'?'active':''}" onclick="scheduleSetMode('plan')">🗓️ خطة الشهر القادم</button>
+          <button id="schModeDiff" class="${scheduleMode==='diff'?'active':''}" onclick="scheduleSetMode('diff')">🔍 الفروق بينهم</button>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;">
           <button class="btn-sm btn-go" onclick="exportScheduleToPdf()">📄 تحويل PDF</button>
           <div class="f-field" style="min-width:220px;"><label>🔎 تصفية باسم الموظف</label>
             <select id="sch_filter_emp" onchange="scheduleSetFilter(this.value)">${filterOptions}</select>
           </div>
-          ${isAdmin && scheduleMode==='plan'? `<span style="font-size:12px;color:#7A8ba0;align-self:center;">اضغط على أي خانة لتحديد مكان/حالة الموظف في هذا اليوم</span>` : `<span style="font-size:12px;color:#7A8ba0;align-self:center;">${scheduleMode==='plan'?'خطة الشهر القادم — للعرض فقط':'معروض من سجلات الحضور الفعلية — للقراءة فقط'}</span>`}
+          ${isAdmin && scheduleMode==='plan'? `<span style="font-size:12px;color:#7A8ba0;align-self:center;">اضغط على أي خانة لتحديد مكان/حالة الموظف في هذا اليوم</span>` : scheduleMode==='diff'? `<span style="font-size:12px;color:#7A8ba0;align-self:center;">🟩 مطابق بين الخطة والحضور الفعلي — 🟥 فيه فرق (اضغط على الخانة أو مرّر الماوس لمعرفة التفاصيل) — للعرض فقط</span>` : `<span style="font-size:12px;color:#7A8ba0;align-self:center;">${scheduleMode==='plan'?'خطة الشهر القادم — للعرض فقط':'معروض من سجلات الحضور الفعلية — للقراءة فقط'}</span>`}
         </div>
       </div>
     </div>
@@ -1829,6 +1834,19 @@ function buildScheduleGridHtml(opts){
     let cells = scheduleNameCellHtml(emp);
     for(let d=1; d<=n; d++){
       const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+      if(scheduleMode==='diff'){
+        const planned = DATA.schedule[emp.id+':'+dateStr] || '';
+        const dayEntries = DATA.entries.filter(e=>e.employeeId===emp.id && e.date===dateStr);
+        const actual = dayEntries.length ? (dayEntries[0].project||'') : '';
+        const match = planned===actual;
+        const titleText = `الخطة: ${planned||'بدون خطة'} — الفعلي: ${actual||'بدون حضور'}`;
+        if(match){
+          cells += `<td class="sch-cell" title="${escapeHtml(titleText)}" style="background:#DCFCE7;">${escapeHtml(shortScheduleLabel(planned))}</td>`;
+        }else{
+          cells += `<td class="sch-cell" title="${escapeHtml(titleText)}" style="background:#FEE2E2;"><div class="diff-cell"><span class="diff-plan">${escapeHtml(shortScheduleLabel(planned)||'—')}</span><span class="diff-sep">≠</span><span class="diff-actual">${escapeHtml(shortScheduleLabel(actual)||'—')}</span></div></td>`;
+        }
+        continue;
+      }
       const val = scheduleCellValue(emp.id, dateStr);
       const bg = colorForScheduleCell(val);
       const clickAttr = opts.editable ? `onclick="openScheduleCellEditor(${emp.id},'${dateStr}')" style="cursor:pointer;background:${bg};"` : `style="background:${bg};"`;
@@ -2016,7 +2034,7 @@ function exportScheduleToPdf(){
   if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
   const [y,m] = scheduleMonth.split('-').map(Number);
   const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  const titleLabel = scheduleMode==='plan' ? 'خطة الشهر' : 'جدول الحضور الفعلي';
+  const titleLabel = scheduleMode==='plan' ? 'خطة الشهر' : scheduleMode==='diff' ? 'الفروق بين الخطة والحضور الفعلي' : 'جدول الحضور الفعلي';
   // The logo/title banner lives INSIDE the table's <thead> (not a separate page div) so that
   // browsers automatically repeat it at the top of every printed page when the table spans pages.
   const bannerCellHtml = `<th colspan="__COLSPAN__" class="pdf-banner">
@@ -2027,16 +2045,21 @@ function exportScheduleToPdf(){
     </th>`;
   const gridHtml = buildScheduleGridHtml({editable:false, extraHeaderRowHtml: bannerCellHtml});
   // Build a color legend from the values actually shown in the grid
-  const usedValues = new Set();
-  DATA.employees.filter(e=>e.active).forEach(emp=>{
-    const n = daysInMonth(scheduleMonth);
-    for(let d=1; d<=n; d++){
-      const dateStr = `${y}-${pad(m)}-${pad(d)}`;
-      const v = scheduleCellValue(emp.id, dateStr);
-      if(v) usedValues.add(v);
-    }
-  });
-  const legendHtml = Array.from(usedValues).map(v=>`<span class="leg-item"><span class="leg-swatch" style="background:${colorForScheduleCell(v)}"></span>${escapeHtml(v)}</span>`).join('');
+  let legendHtml;
+  if(scheduleMode==='diff'){
+    legendHtml = `<span class="leg-item"><span class="leg-swatch" style="background:#DCFCE7"></span>مطابق بين الخطة والحضور الفعلي</span><span class="leg-item"><span class="leg-swatch" style="background:#FEE2E2"></span>فيه فرق بين الخطة والحضور الفعلي</span>`;
+  }else{
+    const usedValues = new Set();
+    DATA.employees.filter(e=>e.active).forEach(emp=>{
+      const n = daysInMonth(scheduleMonth);
+      for(let d=1; d<=n; d++){
+        const dateStr = `${y}-${pad(m)}-${pad(d)}`;
+        const v = scheduleCellValue(emp.id, dateStr);
+        if(v) usedValues.add(v);
+      }
+    });
+    legendHtml = Array.from(usedValues).map(v=>`<span class="leg-item"><span class="leg-swatch" style="background:${colorForScheduleCell(v)}"></span>${escapeHtml(v)}</span>`).join('');
+  }
   const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
     <title>${titleLabel} — ${monthNames[m-1]} ${y}</title>
     <style>
@@ -2061,6 +2084,10 @@ function exportScheduleToPdf(){
       .sch-emp-cell{display:flex;align-items:center;gap:3px;}
       .sch-emp-cell img, .sch-emp-cell .sch-emp-initial{width:16px;height:16px;border-radius:50%;object-fit:cover;flex:none;background:#003A72;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;}
       .sch-emp-cell .sch-emp-name{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      .diff-cell{display:flex;flex-direction:column;gap:0;font-size:7px;line-height:1.1;}
+      .diff-cell .diff-plan{color:#003A72;font-weight:700;}
+      .diff-cell .diff-sep{color:#B91C1C;font-size:6px;}
+      .diff-cell .diff-actual{color:#B91C1C;font-weight:700;}
       .footer{padding:8px 10mm 14px;font-size:9px;color:#8A97A6;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;}
       .footer img{height:26px;width:auto;}
       @page{ size: A3 landscape; margin: 8mm; }
