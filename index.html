@@ -569,7 +569,7 @@ td.name-cell{width:1%;white-space:nowrap;}
           <input type="password" id="securityPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doSecurityLogin()">دخول كأمن</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">أمن</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">sec123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
       </div>
 
       <div id="supLoginForm" style="display:none;">
@@ -582,7 +582,7 @@ td.name-cell{width:1%;white-space:nowrap;}
           <input type="password" id="supPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doSupLogin()">دخول كمشرف وردية</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">supervisor1</b> / <b class="mono">مشرف</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المشرفون".</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">supervisor1</b> / <b class="mono">super123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المشرفون".</div>
       </div>
 
       <div id="leadLoginForm" style="display:none;">
@@ -595,7 +595,7 @@ td.name-cell{width:1%;white-space:nowrap;}
           <input type="password" id="leadPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doLeadLogin()">دخول كمدير</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">lead1</b> / <b class="mono">مدير</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المدير (Leads)".</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">lead1</b> / <b class="mono">lead123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المدير (Leads)".</div>
       </div>
 
       <div id="empLoginForm" style="display:none;">
@@ -667,6 +667,7 @@ td.name-cell{width:1%;white-space:nowrap;}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
 <!-- Firebase (compat build – works with plain <script> tags, no bundler needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1064,20 +1065,18 @@ function computePeriodFinancials(employeeId, from, to){
     const match = findOverlappingHoliday(e);
     if(match){ holidayTotal += (DATA.settings.holidayBonus||0); holidayDays.push({date:e.date, name:match.name, timeIn:e.timeIn, timeOut:e.timeOut}); }
   });
-  const months = monthsBetween(from,to);
+  const currentMonth = (to||from).slice(0,7);
   const th = DATA.settings.incentiveThreshold||4.5;
   let incentiveTotal=0; const evalMonths=[];
-  months.forEach(month=>{
-    const ev = DATA.monthlyEvaluations.find(x=>x.personType==='employee' && x.personId===employeeId && x.month===month);
-    if(ev){
-      const percent = ev.score>=th ? 100 : Math.max(0,(ev.score/th)*100);
-      const value = (emp.incentive||0) * percent/100;
-      incentiveTotal += value;
-      evalMonths.push({month, score:ev.score, percent, value});
-    }else{
-      evalMonths.push({month, score:null, percent:0, value:0});
-    }
-  });
+  const ev = DATA.monthlyEvaluations.find(x=>x.personType==='employee' && x.personId===employeeId && x.month===currentMonth);
+  if(ev){
+    const percent = ev.score>=th ? 100 : Math.max(0,(ev.score/th)*100);
+    const value = (emp.incentive||0) * percent/100;
+    incentiveTotal += value;
+    evalMonths.push({month:currentMonth, score:ev.score, percent, value});
+  }else{
+    evalMonths.push({month:currentMonth, score:null, percent:0, value:0});
+  }
   const grandTotal = regPay+otPay+transportTotal+holidayTotal+incentiveTotal;
   return {regHours,regPay,otHours,otPay,flatPayDays,transportTotal,transportDays,holidayTotal,holidayDays,evalMonths,incentiveTotal,grandTotal};
 }
@@ -1271,6 +1270,7 @@ function enterApp(){
       <div class="avatar" style="background:var(--navy-3);">${escapeHtml((sec.name||'?').charAt(0))}</div>`;
     buildNav([
       {id:'activity', ico:'🟢', label:'النشاط اليومي'},
+      {id:'entries', ico:'🕒', label:'متابعة الحضور'},
       {id:'kiosk', ico:'🛂', label:'تسجيل حضور / انصراف'},
       {id:'scheduleGrid', ico:'🗓️', label:'جدول الشهر / الخطة'},
     ]);
@@ -1350,7 +1350,7 @@ function switchTab(tab){
     holidays:['الإجازات الرسمية','إدارة أيام العطلات الرسمية'],
     scheduleGrid:['جدول الموظفين الشهري','عرض الحضور الفعلي أو إعداد خطة للشهر القادم'],
     supervisors:['المشرفون','إدارة حسابات مشرفي الورديات'],
-    leads:['المدير (Leads)','إدارة حسابات مدير المشرفين'],
+    leads:['المدير (Leads)','إدارة حسابات مدراء المشرفين'],
     security:['الأمن','إدارة حسابات نقاط الأمن'],
     settings:['الإعدادات','قيم الأجور والبدلات والحوافز'],
     clock:['تسجيل حضور / انصراف','بصمة اليوم'],
@@ -2186,7 +2186,7 @@ function renderLeadsTab(){
         <button class="btn-sm btn-go" onclick="editLead(null)">+ إضافة مدير</button>
       </div>
       <div class="panel-body table-wrap">
-        ${DATA.leads.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🧭</div>لا يوجد مدير بعد</div>`}
+        ${DATA.leads.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🧭</div>لا يوجد مدراء بعد</div>`}
       </div>
     </div>
     <div class="notice-banner">💡 المدير (Lead) هو المسؤول عن اعتماد طلبات الإجازة نهائيًا بعد موافقة المشرف المباشر. اربط كل مشرف بمديره من تبويب "المشرفون".</div>
@@ -2959,7 +2959,7 @@ function renderEntriesResults(){
   if(from) list = list.filter(e=>e.date>=from);
   if(to) list = list.filter(e=>e.date<=to);
   list.sort((a,b)=> (b.date+b.timeIn).localeCompare(a.date+a.timeIn));
-  document.getElementById('entriesResultsWrap').innerHTML = renderEntriesTable(list, SESSION.role==='admin', SESSION.role!=='supervisor');
+  document.getElementById('entriesResultsWrap').innerHTML = renderEntriesTable(list, SESSION.role==='admin', SESSION.role!=='supervisor' && SESSION.role!=='security');
 }
 function exportEntriesToExcel(){
   if(typeof XLSX==='undefined'){ alert('تعذّر تحميل مكتبة تصدير Excel — تأكد من اتصال الإنترنت وحاول مرة أخرى.'); return; }
@@ -2971,7 +2971,7 @@ function exportEntriesToExcel(){
   if(from) list = list.filter(e=>e.date>=from);
   if(to) list = list.filter(e=>e.date<=to);
   list.sort((a,b)=> (a.date+a.timeIn).localeCompare(b.date+b.timeIn));
-  const showLocation = SESSION.role!=='supervisor';
+  const showLocation = SESSION.role!=='supervisor' && SESSION.role!=='security';
   const rows = [showLocation
     ? ['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة','موقع الدخول','موقع الخروج','IP الدخول','IP الخروج','جهاز الدخول','جهاز الخروج']
     : ['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة']];
@@ -3421,55 +3421,135 @@ function countWorkDaysByLocation(employeeId, from, to){
   return res;
 }
 
-function exportTimesheetTemplateExcel(from, to){
-  if(typeof XLSX==='undefined'){ alert('تعذّر تحميل مكتبة تصدير Excel — تأكد من اتصال الإنترنت وحاول مرة أخرى.'); return; }
-  const employees = DATA.employees.filter(e=>e.active);
+async function exportTimesheetTemplateExcel(from, to){
+  if(typeof ExcelJS==='undefined'){ alert('تعذّر تحميل مكتبة تصدير Excel — تأكد من اتصال الإنترنت وحاول مرة أخرى.'); return; }
+  const employees = DATA.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   if(!employees.length){ alert('لا يوجد موظفون نشطون'); return; }
 
-  const header = ['Empl. ID','Employee Name','Mokatm Work Days','Airport Work Days','Tegamaa Work Days','October Work Days','OT Hours','Mth Eval','Transport','Overtime','Total'];
-  const aoa = [
-    ['TIMESHEET — IFT Corporation'],
-    ['الفترة من ' + from + ' إلى ' + to],
-    [],
-    header
-  ];
+  const NAVY = 'FF003A72', GREEN = 'FF6FBD44', LIGHT = 'FFF4F7FA', WHITE = 'FFFFFFFF', BORDER = 'FFD7DEE6';
+  const header = ['كود','اسم الموظف','أيام المقطم','أيام المطار','أيام التجمع','أيام أكتوبر','أيام الجمعة/الخميس الثابتة','أيام الإجازات الرسمية','ساعات الأوفر تايم','قيمة التقييم الشهري','بدل الانتقال','قيمة الأوفر تايم','قيمة أيام الجمعة/الخميس','قيمة الإجازات الرسمية','الإجمالي'];
+  const colWidths = [9,24,11,11,11,11,13,13,12,16,13,13,16,15,15];
+  const moneyCols = [10,11,12,13,14,15]; // 1-based column indices that hold currency values
 
-  let sumEval=0, sumTransport=0, sumOt=0, sumTotal=0;
-  employees.forEach(emp=>{
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'IFT Corporation';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('TIMESHEET', { views:[{ rightToLeft:true, state:'frozen', ySplit:5 }] });
+  ws.columns = colWidths.map(w=>({ width: w }));
+
+  // Title
+  ws.mergeCells(1,1,1,header.length);
+  const titleCell = ws.getCell(1,1);
+  titleCell.value = 'IFT Corporation  —  كشف TIMESHEET الشهري';
+  titleCell.font = { name:'Arial', size:16, bold:true, color:{argb:WHITE} };
+  titleCell.alignment = { horizontal:'center', vertical:'middle' };
+  titleCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+  ws.getRow(1).height = 30;
+
+  // Subtitle (period)
+  ws.mergeCells(2,1,2,header.length);
+  const subCell = ws.getCell(2,1);
+  subCell.value = `الفترة من ${from} إلى ${to}   —   تاريخ الإصدار: ${todayStr()}   —   عدد الموظفين: ${employees.length}`;
+  subCell.font = { name:'Arial', size:11, italic:true, color:{argb:'FF5C6F84'} };
+  subCell.alignment = { horizontal:'center', vertical:'middle' };
+  ws.getRow(2).height = 20;
+
+  // spacer row 3
+  ws.getRow(3).height = 6;
+
+  // Header row (row 4)
+  const headerRow = ws.getRow(4);
+  header.forEach((h,i)=>{
+    const c = headerRow.getCell(i+1);
+    c.value = h;
+    c.font = { name:'Arial', size:10.5, bold:true, color:{argb:WHITE} };
+    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+    c.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
+    c.border = { top:{style:'thin',color:{argb:BORDER}}, bottom:{style:'thin',color:{argb:BORDER}}, left:{style:'thin',color:{argb:BORDER}}, right:{style:'thin',color:{argb:BORDER}} };
+  });
+  headerRow.height = 34;
+
+  let sumOt=0, sumEval=0, sumTransport=0, sumOvertime=0, sumFlatVal=0, sumHolVal=0, sumTotal=0;
+  let rIdx = 5;
+  employees.forEach((emp, i)=>{
     const f = computePeriodFinancials(emp.id, from, to);
     const wd = countWorkDaysByLocation(emp.id, from, to);
+    const flatPayValue = f.flatPayDays.reduce((s,x)=>s+x.amount,0);
     const mthEval = f.incentiveTotal;
     const transport = f.transportTotal;
     const overtime = f.otPay;
-    const total = mthEval + transport + overtime;
-    sumEval += mthEval; sumTransport += transport; sumOt += overtime; sumTotal += total;
-    aoa.push([
+    const total = mthEval + transport + overtime + flatPayValue + f.holidayTotal;
+    sumOt += f.otHours||0; sumEval += mthEval; sumTransport += transport; sumOvertime += overtime; sumFlatVal += flatPayValue; sumHolVal += f.holidayTotal; sumTotal += total;
+
+    const row = ws.getRow(rIdx);
+    const vals = [
       emp.empCode || emp.id,
       emp.name,
       wd['المقطم']||0,
       wd['المطار']||0,
       wd['التجمع']||0,
       wd['أكتوبر']||0,
+      f.flatPayDays.length,
+      f.holidayDays.length,
       Math.round((f.otHours||0)*100)/100,
       Math.round(mthEval*100)/100,
       Math.round(transport*100)/100,
       Math.round(overtime*100)/100,
+      Math.round(flatPayValue*100)/100,
+      Math.round(f.holidayTotal*100)/100,
       Math.round(total*100)/100
-    ]);
+    ];
+    vals.forEach((v,ci)=>{
+      const c = row.getCell(ci+1);
+      c.value = v;
+      c.font = { name:'Arial', size:10.5 };
+      c.alignment = { horizontal: ci===1 ? 'right' : 'center', vertical:'middle' };
+      c.border = { top:{style:'thin',color:{argb:BORDER}}, bottom:{style:'thin',color:{argb:BORDER}}, left:{style:'thin',color:{argb:BORDER}}, right:{style:'thin',color:{argb:BORDER}} };
+      if(i%2===1) c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:LIGHT} };
+      if(moneyCols.includes(ci+1)) c.numFmt = '#,##0.00 "EGP"';
+    });
+    row.height = 20;
+    rIdx++;
   });
 
-  aoa.push([]);
-  aoa.push(['', '', '', '', '', '', '', Math.round(sumEval*100)/100, Math.round(sumTransport*100)/100, Math.round(sumOt*100)/100, Math.round(sumTotal*100)/100]);
+  // spacer
+  rIdx++;
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:10},{wch:24},{wch:14},{wch:14},{wch:14},{wch:14},{wch:11},{wch:14},{wch:14},{wch:14},{wch:14}];
-  ws['!merges'] = [
-    {s:{r:0,c:0}, e:{r:0,c:header.length-1}},
-    {s:{r:1,c:0}, e:{r:1,c:header.length-1}}
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, 'TIMESHEET');
-  XLSX.writeFile(wb, `TIMESHEET_${from}_${to}.xlsx`);
+  // Totals row
+  const totRow = ws.getRow(rIdx);
+  ws.mergeCells(rIdx,1,rIdx,9);
+  const totLabel = totRow.getCell(1);
+  totLabel.value = 'الإجمالي العام';
+  totLabel.font = { name:'Arial', size:11.5, bold:true, color:{argb:WHITE} };
+  totLabel.alignment = { horizontal:'center', vertical:'middle' };
+  totLabel.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+  const totVals = [Math.round(sumEval*100)/100, Math.round(sumTransport*100)/100, Math.round(sumOvertime*100)/100, Math.round(sumFlatVal*100)/100, Math.round(sumHolVal*100)/100, Math.round(sumTotal*100)/100];
+  totVals.forEach((v,i)=>{
+    const c = totRow.getCell(10+i);
+    c.value = v;
+    c.numFmt = '#,##0.00 "EGP"';
+    c.font = { name:'Arial', size:11.5, bold:true, color:{argb: i===totVals.length-1 ? GREEN : WHITE} };
+    c.alignment = { horizontal:'center', vertical:'middle' };
+    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+  });
+  totRow.height = 26;
+
+  const footRow = ws.getRow(rIdx+2);
+  ws.mergeCells(rIdx+2,1,rIdx+2,header.length);
+  const footCell = footRow.getCell(1);
+  footCell.value = 'IFT Corporation — تم إصدار هذا الكشف تلقائيًا من نظام الحضور والانصراف';
+  footCell.font = { name:'Arial', size:9, italic:true, color:{argb:'FF9AA9BA'} };
+  footCell.alignment = { horizontal:'center' };
+
+  ws.autoFilter = { from: {row:4, column:1}, to: {row:4, column:header.length} };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `TIMESHEET_${from}_${to}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function computeAnnualBonusMonths(avg){
