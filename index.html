@@ -376,6 +376,7 @@ tr:hover td{background:#FAFBFC;}
 .tag-danger{background:var(--danger-bg);color:var(--danger);}
 
 .name-cell{display:flex;align-items:center;gap:8px;}
+td.name-cell{width:1%;white-space:nowrap;}
 
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .form-grid .full{grid-column:1/-1;}
@@ -555,7 +556,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="adminPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doAdminLogin()">دخول كمسؤول</button>
-        <div class="login-hint">تليفون: <b class="mono">01003459541</b> — Mohamed El-Madawy.</div>
+        <div class="login-hint">تليفون: <b class="mono">01003459541</b> — محمد المعداوى.</div>
       </div>
 
       <div id="securityLoginForm" style="display:none;">
@@ -568,7 +569,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="securityPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doSecurityLogin()">دخول كأمن</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">sec123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">security1</b> / <b class="mono">أمن</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "الأمن". هذا الحساب يسجّل حضور وانصراف أي موظف فقط، بدون أي صلاحيات أخرى.</div>
       </div>
 
       <div id="supLoginForm" style="display:none;">
@@ -581,7 +582,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="supPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doSupLogin()">دخول كمشرف وردية</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">supervisor1</b> / <b class="mono">super123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المشرفون".</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">supervisor1</b> / <b class="mono">مشرف</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المشرفون".</div>
       </div>
 
       <div id="leadLoginForm" style="display:none;">
@@ -594,7 +595,7 @@ tr:hover td{background:#FAFBFC;}
           <input type="password" id="leadPassInput" placeholder="••••••••">
         </div>
         <button class="btn btn-primary btn-block" onclick="doLeadLogin()">دخول كمدير</button>
-        <div class="login-hint">حساب تجريبي: <b class="mono">lead1</b> / <b class="mono">lead123</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المدير (Leads)".</div>
+        <div class="login-hint">حساب تجريبي: <b class="mono">lead1</b> / <b class="mono">مدير</b> — يمكن للأدمن إضافة حسابات أخرى من تبويب "المدير (Leads)".</div>
       </div>
 
       <div id="empLoginForm" style="display:none;">
@@ -696,34 +697,34 @@ const LOGO_SMALL_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAAA4qEECAAAZh0lEQVR4
 const LOGO_MELMADAWY_B64 = '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v/8vXS5Xp3kuLi7efdNNN42znm1bz0LTNJx33nnXZ2RkRDqLy+/3G//7v/87M0lcAABrryQuvfTSS3Jzc2VH8SULiqLwySef/Cwzu5B82EMA8PTTTweGDx++oSvpJApExKqqsqZpHAgE9k2ePGn+ggUL+iUqazz20WPLly/P69+//3tCiC6lX1xcfOS2224rs96VZMMvXHjhhTmFhYW7O6vHCy+c/YSqdupYWADAaaeddldGRkaH+Rs1atRbzJxtPaeoqopLLrnkO9aHPmnw+bxHn3jiiQHxZbD70NKlS0ecdNJJOzt6Pj8/z/jxj2++SgBAOByOAGQSUZSIzESBmfUDBw4Mee21155/8sknB1dWVkq7oNOmTVOJyJwzZ86lK1eu+mVDQwMTkZEkLsPSUIJpqNlpoapqFICdnuwgJCxr2yCE0InIVBSlEW06T1VVFUkpm6179UTlFUKYhmGkp5t3QjgctsuYtM0A6AcOHBiwaNGiv951112lAGTch0YRguTs2bPLP/jggyeamppcnbUZEdV3lCdmpoULF8pFixblrV279paamhpKUicdBcM0TWPbtm3Xzp49+xp0Mv1w9OhRMHNTXD673N4ATGY2DMMwdV3nxsbGfv/855qK2267bdmTTz452Eoy4QeHiIiZcffdd99aVVU1RUqZtF06aa/8N954404ppT28TZhefX09DMOwy93Re5fIA2tCotGojtg71e49iOsDtltvu9xQVTXZe9OSNwB1Hk/idBsbG0FETfHpxKXb8u6FQiEpAEAIQYiN1ZMGABoRmTU1NYN++ctfPrZs2bJcq0K1VatWGd///venv/XWyj/U1zdkAWBmVjuJr8f2cFlfO4WZRSehw0M/2wZrnqTVC+TxeJiIRGdlJaJunXRPp80OHTpU+sILLzyzdu3aPpWVldI6n8/8/vd/MO6DDz74bUNDgwsxH+bH1WZERIqi8OOPP37tgQMHpsWagrUEccXXa9u6UwGISCSCNWs+nr9gwYIOBYWVrh1HV9tbxJUv/qgxKaU0Dh48ePIjjzxye8fNIeTcuXOnbd68+T+i0SgDSLfcdtq8bdu2r8+bN28mOhBYbcrdLX0slXcq0dAyrr91EKDY07gVFRWJytRpWRRFSW8oxsyKaZry888/P+/uu+/+rZVR/de//vWwl1566bGamtocxL6IX4ptD0Qk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';
 
 const SEED_EMPLOYEES = [
- {id:1,name:"حازم عباس",type:"Warehouse Associate Lead",phone:"1001770079",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
- {id:2,name:"عبد العزيز حنفى",type:"Operator",phone:"1010201675",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
- {id:3,name:"عصام غالى",type:"Storekeeper (Hatchery Consigment)",phone:"1023474735",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:4,name:"إبراهيم عزت",type:"Operator",phone:"1001031865",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:5,name:"حسن كمال",type:"Storekeeper",phone:"1000071726",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:6,name:"محمد سالم",type:"Storekeeper",phone:"1025550952",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:7,name:"رمضان محمد",type:"Operator",phone:"1023474736",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:8,name:"احمد قناوى",type:"Storekeeper",phone:"1066616706",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:9,name:"محمد امين",type:"Warehouse Associate Lead",phone:"1001732353",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:10,name:"احمد السيد ناصر",type:"Operator",phone:"1000812095",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:11,name:"احمد السيد حسين",type:"Operator",phone:"1090092856",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:12,name:"محمد يونس",type:"Storekeeper & Co",phone:"1098883714",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:13,name:"نبيل قاسم",type:"Assistant",phone:"1095359800",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
- {id:14,name:"اسامه حنفى",type:"Storekeeper",phone:"1065782052",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:15,name:"علاء احمد",type:"Storekeeper",phone:"1001718127",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:16,name:"احمد عزت",type:"Operator",phone:"1032459757",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:17,name:"انس محمد فاروق",type:"Operator",phone:"1050554596",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:18,name:"محمود عبد الفتاح",type:"Storekeeper",phone:"1098886687",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:19,name:"محمد جازى",type:"Assistant",phone:"1009330400",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:21,name:"ايمن رمضان",type:"Operator",phone:"1023474734",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:22,name:"محمد شوقى",type:"Storekeeper",phone:"1002528155",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:23,name:"محمد عبد الله",type:"Warehouse Associate Lead",phone:"1001785123",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:24,name:"محمود زايد",type:"Operator",phone:"1147318508",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:25,name:"سلامه عابدين فخرى اسماعيل",type:"Operator",phone:"1008657402",hourlyRate:0,incentive:750,active:true,photo:null,teamLeadId:null},
- {id:26,name:"مصطفى فوزى",type:"Storekeeper",phone:"1027500501",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
- {id:27,name:"كريم حسن",type:"Warehouse Lead",phone:"1022213421",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
- {id:28,name:"محمد المعداوى",type:"Warehouse Lead",phone:"1003459541",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
- {id:29,name:"حسام",type:"Operator",phone:"1066616703",hourlyRate:0,incentive:750,active:true,photo:null,teamLeadId:null}
+ {id:1,empCode:"281",name:"حازم عباس",type:"Warehouse Associate Lead",phone:"1001770079",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
+ {id:2,empCode:"997",name:"عبد العزيز حنفى",type:"Operator",phone:"1010201675",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
+ {id:3,empCode:"227",name:"عصام غالى",type:"Storekeeper (Hatchery Consigment)",phone:"1023474735",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:4,empCode:"903",name:"إبراهيم عزت",type:"Operator",phone:"1001031865",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:5,empCode:"35",name:"حسن كمال",type:"Storekeeper",phone:"1000071726",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:6,empCode:"361",name:"محمد سالم",type:"Storekeeper",phone:"1025550952",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:7,empCode:"205",name:"رمضان محمد",type:"Operator",phone:"1023474736",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:8,empCode:"305",name:"احمد قناوى",type:"Storekeeper",phone:"1066616706",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:9,empCode:"282",name:"محمد امين",type:"Warehouse Associate Lead",phone:"1001732353",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:10,empCode:"1258",name:"احمد السيد ناصر",type:"Operator",phone:"1000812095",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:11,empCode:"1260",name:"احمد السيد حسين",type:"Operator",phone:"1090092856",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:12,empCode:"226",name:"محمد يونس",type:"Storekeeper & Co",phone:"1098883714",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:13,empCode:"656",name:"نبيل قاسم",type:"Assistant",phone:"1095359800",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
+ {id:14,empCode:"532",name:"اسامه حنفى",type:"Storekeeper",phone:"1065782052",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:15,empCode:"244",name:"علاء احمد",type:"Storekeeper",phone:"1001718127",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:16,empCode:"1293",name:"احمد عزت",type:"Operator",phone:"1032459757",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:17,empCode:"972",name:"انس محمد فاروق",type:"Operator",phone:"1050554596",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:18,empCode:"204",name:"محمود عبد الفتاح",type:"Storekeeper",phone:"1098886687",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:19,empCode:"172",name:"محمد جازى",type:"Assistant",phone:"1009330400",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:21,empCode:"245",name:"ايمن رمضان",type:"Operator",phone:"1023474734",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:22,empCode:"659",name:"محمد شوقى",type:"Storekeeper",phone:"1002528155",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:23,empCode:"92",name:"محمد عبد الله",type:"Warehouse Associate Lead",phone:"1001785123",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:24,empCode:"1197",name:"محمود زايد",type:"Operator",phone:"1147318508",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:25,empCode:"306",name:"سلامه عابدين فخرى اسماعيل",type:"Operator",phone:"1008657402",hourlyRate:0,incentive:750,active:true,photo:null,teamLeadId:null},
+ {id:26,empCode:"372",name:"مصطفى فوزى",type:"Storekeeper",phone:"1027500501",hourlyRate:0,incentive:800,active:true,photo:null,teamLeadId:null},
+ {id:27,empCode:"661",name:"كريم حسن",type:"Warehouse Lead",phone:"1022213421",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
+ {id:28,empCode:"36",name:"محمد المعداوى",type:"Warehouse Lead",phone:"1003459541",hourlyRate:0,incentive:1000,active:true,photo:null,teamLeadId:null},
+ {id:29,empCode:"",name:"حسام",type:"Operator",phone:"1066616703",hourlyRate:0,incentive:750,active:true,photo:null,teamLeadId:null}
 ];
 
 const SEED_PROJECTS = [
@@ -802,10 +803,10 @@ async function loadData(){
       if(!DATA.leaveRequests) DATA.leaveRequests = [];
       if(!DATA.settings.leaveTypes) DATA.settings.leaveTypes = JSON.parse(JSON.stringify(SEED_LEAVE_TYPES));
       if(!DATA.settings.locationGroups) DATA.settings.locationGroups = JSON.parse(JSON.stringify(SEED_SETTINGS.locationGroups));
-      DATA.supervisors.forEach(s=>{ if(s.leadId===undefined) s.leadId=null; });
+      DATA.supervisors.forEach(s=>{ if(s.leadId===undefined) s.leadId=null; if(s.kioskLocation===undefined) s.kioskLocation=''; });
       if(!DATA.dailyEvaluations) DATA.dailyEvaluations = [];
       if(!DATA.monthlyEvaluations) DATA.monthlyEvaluations = [];
-      DATA.employees.forEach(e=>{ if(e.incentive===undefined) e.incentive = e.transport||0; if(e.photo===undefined) e.photo=null; if(e.monthlySalary===undefined) e.monthlySalary=0; if(e.pin===undefined) e.pin=''; if(e.supervisorId===undefined) e.supervisorId=null; if(e.baseLocation===undefined) e.baseLocation=''; if(e.teamLeadId===undefined) e.teamLeadId=null; });
+      DATA.employees.forEach(e=>{ if(e.incentive===undefined) e.incentive = e.transport||0; if(e.photo===undefined) e.photo=null; if(e.monthlySalary===undefined) e.monthlySalary=0; if(e.pin===undefined) e.pin=''; if(e.supervisorId===undefined) e.supervisorId=null; if(e.baseLocation===undefined) e.baseLocation=''; if(e.teamLeadId===undefined) e.teamLeadId=null; if(e.empCode===undefined) e.empCode=''; });
       if(!DATA.settings.annualBonus) DATA.settings.annualBonus = {...SEED_SETTINGS.annualBonus};
       if(!DATA.schedule) DATA.schedule = {};
       // Migrate legacy holidays ({name,date}) to the new from/to datetime range format
@@ -1269,6 +1270,7 @@ function enterApp(){
       <div style="text-align:left;"><div class="name">${escapeHtml(sec.name)}</div><div class="role">أمن</div></div>
       <div class="avatar" style="background:var(--navy-3);">${escapeHtml((sec.name||'?').charAt(0))}</div>`;
     buildNav([
+      {id:'activity', ico:'🟢', label:'النشاط اليومي'},
       {id:'kiosk', ico:'🛂', label:'تسجيل حضور / انصراف'},
       {id:'scheduleGrid', ico:'🗓️', label:'جدول الشهر / الخطة'},
     ]);
@@ -1296,6 +1298,7 @@ function enterApp(){
       <div style="text-align:left;"><div class="name">${escapeHtml(sup.name)}</div><div class="role">مشرف وردية</div></div>
       <div class="avatar" style="background:var(--navy-3);">${escapeHtml((sup.name||'?').charAt(0))}</div>`;
     buildNav([
+      ...(sup.kioskLocation ? [{id:'kiosk', ico:'🛂', label:'تسجيل حضور / انصراف'}] : []),
       {id:'activity', ico:'🟢', label:'النشاط اليومي'},
       {id:'entries', ico:'🕒', label:'متابعة الحضور'},
       {id:'leaves_sup', ico:'🗓️', label:'طلبات الإجازات'},
@@ -1347,7 +1350,7 @@ function switchTab(tab){
     holidays:['الإجازات الرسمية','إدارة أيام العطلات الرسمية'],
     scheduleGrid:['جدول الموظفين الشهري','عرض الحضور الفعلي أو إعداد خطة للشهر القادم'],
     supervisors:['المشرفون','إدارة حسابات مشرفي الورديات'],
-    leads:['المدير (Leads)','إدارة حسابات مدراء المشرفين'],
+    leads:['المدير (Leads)','إدارة حسابات مدير المشرفين'],
     security:['الأمن','إدارة حسابات نقاط الأمن'],
     settings:['الإعدادات','قيم الأجور والبدلات والحوافز'],
     clock:['تسجيل حضور / انصراف','بصمة اليوم'],
@@ -1456,6 +1459,7 @@ function renderEmployeesTab(){
     <tr>
       <td>${getAvatarHtml(e.name, e.photo, 'avatar-sm')}</td>
       <td class="mono">${e.id}</td>
+      <td class="mono">${escapeHtml(e.empCode||'—')}</td>
       <td class="name-cell">${escapeHtml(e.name)}</td>
       <td>${escapeHtml(e.type)}</td>
       <td class="mono">${escapeHtml(e.phone)}</td>
@@ -1477,7 +1481,7 @@ function renderEmployeesTab(){
       </div>
       <div class="panel-body table-wrap">
         ${DATA.employees.length? `<table>
-          <thead><tr><th>الصورة</th><th>#</th><th>الاسم</th><th>الوظيفة</th><th>الهاتف</th><th>الأجر/ساعة</th><th>الحافز الشهري</th><th>المشرف</th><th>الحالة</th><th>—</th></tr></thead>
+          <thead><tr><th>الصورة</th><th>#</th><th>كود الموظف</th><th>الاسم</th><th>الوظيفة</th><th>الهاتف</th><th>الأجر/ساعة</th><th>الحافز الشهري</th><th>المشرف</th><th>الحالة</th><th>—</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>` : `<div class="empty-state"><div class="ico">👥</div>لا يوجد موظفون بعد</div>`}
       </div>
@@ -1486,7 +1490,7 @@ function renderEmployeesTab(){
 }
 function editEmployee(id){
   _tempPhoto = undefined;
-  const e = id ? empById(id) : {id:null,name:'',type:'',phone:'',hourlyRate:0,incentive:0,monthlySalary:0,pin:'',active:true,photo:null,supervisorId:null};
+  const e = id ? empById(id) : {id:null,empCode:'',name:'',type:'',phone:'',hourlyRate:0,incentive:0,monthlySalary:0,pin:'',active:true,photo:null,supervisorId:null};
   const defaultPin = (e.phone||'').slice(-4);
   openModal(id? 'تعديل بيانات الموظف' : 'إضافة موظف جديد', `
     <div class="photo-upload">
@@ -1498,6 +1502,7 @@ function editEmployee(id){
     </div>
     <div class="form-grid">
       <div class="f-field full"><label>الاسم</label><input id="f_name" value="${escapeHtml(e.name)}"></div>
+      <div class="f-field"><label>كود الموظف</label><input id="f_empcode" value="${escapeHtml(e.empCode||'')}" placeholder="مثال: 281"></div>
       <div class="f-field"><label>الوظيفة</label><input id="f_type" value="${escapeHtml(e.type)}"></div>
       <div class="f-field"><label>رقم الهاتف</label><input id="f_phone" value="${escapeHtml(e.phone)}" placeholder="01xxxxxxxxx"></div>
       <div class="f-field"><label>الأجر بالساعة (جنيه)</label><input id="f_rate" type="number" step="0.01" value="${e.hourlyRate||0}"></div>
@@ -1539,6 +1544,7 @@ function editEmployee(id){
 }
 async function saveEmployee(id){
   const name = document.getElementById('f_name').value.trim();
+  const empCode = document.getElementById('f_empcode').value.trim();
   const type = document.getElementById('f_type').value.trim();
   const phone = document.getElementById('f_phone').value.trim();
   const rate = parseFloat(document.getElementById('f_rate').value)||0;
@@ -1552,10 +1558,10 @@ async function saveEmployee(id){
   if(!name){ alert('من فضلك اكتب اسم الموظف'); return; }
   if(id){
     const e = empById(id);
-    Object.assign(e, {name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,teamLeadId,active});
+    Object.assign(e, {name,empCode,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,teamLeadId,active});
     if(_tempPhoto!==undefined) e.photo = _tempPhoto;
   }else{
-    DATA.employees.push({id: nextId(DATA.employees), name,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,teamLeadId,active, photo:_tempPhoto||null});
+    DATA.employees.push({id: nextId(DATA.employees), name,empCode,type,phone,hourlyRate:rate,incentive,monthlySalary,pin,supervisorId,baseLocation,teamLeadId,active, photo:_tempPhoto||null});
   }
   await saveData();
   closeModal();
@@ -2087,6 +2093,7 @@ function renderSupervisorsTab(){
       <td>${escapeHtml(s.name)}</td>
       <td class="mono">${escapeHtml(s.username)}</td>
       <td>${lead? escapeHtml(lead.name) : '<span class="tag tag-warn">بدون مدير</span>'}</td>
+      <td>${s.kioskLocation? `<span class="tag tag-open">🛂 ${escapeHtml(s.kioskLocation)}</span>` : '<span class="tag tag-warn">بدون تسجيل حضور</span>'}</td>
       <td>${s.active? '<span class="tag tag-open">نشط</span>' : '<span class="tag tag-closed">موقوف</span>'}</td>
       <td>
         <button class="btn-sm btn-teal" onclick="editSupervisor(${s.id})">تعديل</button>
@@ -2100,13 +2107,13 @@ function renderSupervisorsTab(){
         <button class="btn-sm btn-go" onclick="editSupervisor(null)">+ إضافة مشرف</button>
       </div>
       <div class="panel-body table-wrap">
-        ${DATA.supervisors.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>المدير (Lead)</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🛡️</div>لا يوجد مشرفون بعد</div>`}
+        ${DATA.supervisors.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>المدير (Lead)</th><th>تسجيل الحضور</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🛡️</div>لا يوجد مشرفون بعد</div>`}
       </div>
     </div>
   `;
 }
 function editSupervisor(id){
-  const s = id? supById(id) : {id:null,name:'',username:'',password:'',active:true,leadId:null};
+  const s = id? supById(id) : {id:null,name:'',username:'',password:'',active:true,leadId:null,kioskLocation:''};
   openModal(id?'تعديل مشرف':'إضافة مشرف وردية', `
     <div class="form-grid">
       <div class="f-field full"><label>الاسم</label><input id="s_name" value="${escapeHtml(s.name)}"></div>
@@ -2117,6 +2124,13 @@ function editSupervisor(id){
           <option value="">-- بدون مدير --</option>
           ${DATA.leads.filter(l=>l.active).map(l=>`<option value="${l.id}" ${s.leadId===l.id?'selected':''}>${escapeHtml(l.name)}</option>`).join('')}
         </select>
+      </div>
+      <div class="f-field full"><label>تسجيل حضور/انصراف (زي الأمن) — محصور بموقع معيّن</label>
+        <select id="s_kiosk_loc">
+          <option value="">-- غير مفعّل --</option>
+          ${DATA.settings.locationGroups.map(l=>`<option value="${l}" ${s.kioskLocation===l?'selected':''}>${escapeHtml(l)}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:#9AA9BA;margin-top:4px;">لو فعّلت موقع هنا، هيظهر لهذا المشرف تبويب "تسجيل حضور / انصراف" زي الأمن بالظبط، لكن هيقدر يسجّل بس للموظفين اللي "الموقع الأساسي" بتاعهم هو نفس الموقع المختار.</div>
       </div>
       <div class="f-field full"><label>الحالة</label>
         <select id="s_active">
@@ -2136,12 +2150,13 @@ async function saveSupervisor(id){
   const username = document.getElementById('s_user').value.trim();
   const password = document.getElementById('s_pass').value;
   const leadId = document.getElementById('s_lead').value ? parseInt(document.getElementById('s_lead').value) : null;
+  const kioskLocation = document.getElementById('s_kiosk_loc').value;
   const active = document.getElementById('s_active').value==='1';
   if(!name || !username || !password){ alert('من فضلك أكمل كل الحقول'); return; }
   const dup = DATA.supervisors.find(x=>x.username===username && x.id!==id);
   if(dup){ alert('اسم المستخدم مستخدم بالفعل'); return; }
-  if(id){ Object.assign(supById(id), {name,username,password,leadId,active}); }
-  else{ DATA.supervisors.push({id: nextId(DATA.supervisors), name,username,password,leadId,active}); }
+  if(id){ Object.assign(supById(id), {name,username,password,leadId,kioskLocation,active}); }
+  else{ DATA.supervisors.push({id: nextId(DATA.supervisors), name,username,password,leadId,kioskLocation,active}); }
   await saveData(); closeModal(); renderSupervisorsTab();
 }
 async function deleteSupervisor(id){
@@ -2171,7 +2186,7 @@ function renderLeadsTab(){
         <button class="btn-sm btn-go" onclick="editLead(null)">+ إضافة مدير</button>
       </div>
       <div class="panel-body table-wrap">
-        ${DATA.leads.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🧭</div>لا يوجد مدراء بعد</div>`}
+        ${DATA.leads.length? `<table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الحالة</th><th>—</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty-state"><div class="ico">🧭</div>لا يوجد مدير بعد</div>`}
       </div>
     </div>
     <div class="notice-banner">💡 المدير (Lead) هو المسؤول عن اعتماد طلبات الإجازة نهائيًا بعد موافقة المشرف المباشر. اربط كل مشرف بمديره من تبويب "المشرفون".</div>
@@ -2284,13 +2299,22 @@ async function deleteSecurity(id){
 /* ==========================================================
    SECURITY: KIOSK — clock any employee in/out, no other permissions
    ========================================================== */
+function kioskAllowedLocation(){
+  if(SESSION && SESSION.role==='supervisor'){
+    const sup = supById(SESSION.supervisorId);
+    return sup && sup.kioskLocation ? sup.kioskLocation : null;
+  }
+  return null;
+}
 function renderKioskTab(){
-  const activeEmps = DATA.employees.filter(e=>e.active).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const loc = kioskAllowedLocation();
+  const activeEmps = DATA.employees.filter(e=>e.active && (!loc || e.baseLocation===loc)).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   document.getElementById('content').innerHTML = `
     <div class="punch-wrap">
       <div class="punch-card">
         <div class="punch-clock-big mono" id="punchClockBig">00:00:00</div>
         <div class="punch-date" id="punchDateBig">—</div>
+        ${loc? `<div class="notice-banner">🛂 تسجيل الحضور هنا محصور على موظفي موقع "${escapeHtml(loc)}" فقط.</div>` : ''}
         <div class="punch-project">
           <label>التاريخ (لتسجيل حضور يوم سابق لو لزم)</label>
           <input type="date" id="kioskDate" value="${todayStr()}" max="${todayStr()}" onchange="renderKioskStatus()">
@@ -2298,7 +2322,7 @@ function renderKioskTab(){
         <div class="punch-project">
           <label>اختر الموظف</label>
           <select id="kioskEmp" onchange="renderKioskStatus()">
-            ${activeEmps.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.type)}</option>`).join('')}
+            ${activeEmps.length? activeEmps.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.type)}</option>`).join('') : `<option value="">-- لا يوجد موظفون على هذا الموقع --</option>`}
           </select>
         </div>
         <div id="kioskStatusWrap"></div>
@@ -2315,7 +2339,9 @@ function renderKioskTab(){
 }
 function renderKioskStatus(){
   const wrap = document.getElementById('kioskStatusWrap');
-  const empId = parseInt(document.getElementById('kioskEmp').value);
+  const empSel = document.getElementById('kioskEmp').value;
+  if(!empSel){ if(wrap) wrap.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="ico">🚫</div>لا يوجد موظفون متاحون لك لتسجيل حضورهم</div>`; return; }
+  const empId = parseInt(empSel);
   const dateSel = document.getElementById('kioskDate').value || todayStr();
   const emp = empById(empId);
   if(!emp || !wrap) return;
@@ -2359,7 +2385,7 @@ function renderKioskStatus(){
     ${!open? `
     <div class="punch-project">
       <label>المشروع / الموقع</label>
-      <select id="kioskProject">${DATA.projects.map(p=>`<option>${escapeHtml(p)}</option>`).join('')}</select>
+      <select id="kioskProject">${(kioskAllowedLocation() ? DATA.projects.filter(p=>p.includes(kioskAllowedLocation())) : DATA.projects).map(p=>`<option>${escapeHtml(p)}</option>`).join('')}</select>
     </div>` : ''}
     <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px;">⏱️ الوقت معبّى تلقائيًا بالوقت الحالي، وتقدر تعدّله يدويًا لو الموظف حضر/انصرف في وقت مختلف.</div>
   `;
@@ -2367,8 +2393,10 @@ function renderKioskStatus(){
 function renderKioskPresentList(){
   const wrap = document.getElementById('kioskPresentWrap');
   if(!wrap) return;
+  const loc = kioskAllowedLocation();
   const open = DATA.entries.filter(e=>!e.timeOut).sort((a,b)=> (b.date+b.timeIn).localeCompare(a.date+a.timeIn));
-  wrap.innerHTML = open.length? open.map(e=>{
+  const filtered = loc ? open.filter(e=>{ const emp=empById(e.employeeId); return emp && emp.baseLocation===loc; }) : open;
+  wrap.innerHTML = filtered.length? filtered.map(e=>{
     const emp = empById(e.employeeId);
     if(!emp) return '';
     return `<div class="mini-stat"><div class="k">${getAvatarHtml(emp.name,emp.photo,'avatar-sm')} ${escapeHtml(emp.name)}</div><div class="v mono">${e.timeIn}</div></div>`;
@@ -2383,14 +2411,16 @@ async function handleKioskPunch(){
   if(btn){ btn.disabled = true; btn.textContent = '... جارِ التسجيل'; }
   const [geo, ip] = await Promise.all([ getGeoLocation(), getPublicIp() ]);
   const device = getDeviceInfo();
-  const sec = secById(SESSION.securityId);
+  let checkerName = null;
+  if(SESSION.role==='security'){ const sec = secById(SESSION.securityId); checkerName = sec ? sec.name : null; }
+  else if(SESSION.role==='supervisor'){ const sup = supById(SESSION.supervisorId); checkerName = sup ? sup.name : null; }
   if(open){
     if(chosenTime <= open.timeIn){ alert('وقت الانصراف لازم يكون بعد وقت الحضور ('+open.timeIn+')'); if(btn){btn.disabled=false; btn.textContent='تسجيل انصراف';} return; }
     open.timeOut = chosenTime;
     open.locationOut = geo;
     open.ipOut = ip;
     open.deviceOut = device;
-    open.checkedOutBySecurity = sec ? sec.name : null;
+    open.checkedOutBySecurity = checkerName;
     await saveData();
     showToast(greetingFor(emp.name, 'out'));
   }else{
@@ -2399,7 +2429,7 @@ async function handleKioskPunch(){
       id: nextId(DATA.entries), employeeId: emp.id, date: todayStr(),
       timeIn: chosenTime, timeOut: null, project, notes:'',
       locationIn: geo, ipIn: ip, deviceIn: device,
-      checkedInBySecurity: sec ? sec.name : null
+      checkedInBySecurity: checkerName
     });
     await saveData();
     showToast(greetingFor(emp.name, 'in'));
@@ -2849,12 +2879,13 @@ async function saveAdminPass(){
 /* ==========================================================
    ADMIN / SUPERVISOR: ENTRIES
    ========================================================== */
-function renderEntriesTable(list, editable){
+function renderEntriesTable(list, editable, showLocation){
+  if(showLocation===undefined) showLocation = true;
   if(!list.length) return `<div class="empty-state"><div class="ico">🕒</div>لا توجد سجلات في هذا النطاق</div>`;
   return `<table>
     <thead><tr>
       <th>الموظف</th><th>التاريخ</th><th>المشروع/الموقع</th><th>دخول</th><th>خروج</th>
-      <th>ساعات عادية</th><th>أوفر تايم</th><th>إجمالي الأجر</th><th>الحالة</th><th>الموقع/الجهاز</th>${editable?'<th>—</th>':''}
+      <th>ساعات عادية</th><th>أوفر تايم</th><th>إجمالي الأجر</th><th>الحالة</th>${showLocation?'<th>الموقع/الجهاز</th>':''}${editable?'<th>—</th>':''}
     </tr></thead>
     <tbody>
       ${list.map(e=>{
@@ -2871,7 +2902,7 @@ function renderEntriesTable(list, editable){
           <td class="mono">${fmtHrs(h.ot)}</td>
           <td class="mono">${fmtMoney(p.totalPay)}</td>
           <td>${e.timeOut? '<span class="tag tag-closed">مغلق</span>' : '<span class="tag tag-open">جاري الآن</span>'}</td>
-          <td>${renderLocDeviceCell(e)}</td>
+          ${showLocation? `<td>${renderLocDeviceCell(e)}</td>` : ''}
           ${editable? `<td>
             <button class="btn-sm btn-teal" onclick="editEntry(${e.id})">تعديل</button>
             <button class="btn-sm btn-danger" onclick="deleteEntry(${e.id})">حذف</button>
@@ -2928,7 +2959,7 @@ function renderEntriesResults(){
   if(from) list = list.filter(e=>e.date>=from);
   if(to) list = list.filter(e=>e.date<=to);
   list.sort((a,b)=> (b.date+b.timeIn).localeCompare(a.date+a.timeIn));
-  document.getElementById('entriesResultsWrap').innerHTML = renderEntriesTable(list, SESSION.role==='admin');
+  document.getElementById('entriesResultsWrap').innerHTML = renderEntriesTable(list, SESSION.role==='admin', SESSION.role!=='supervisor');
 }
 function exportEntriesToExcel(){
   if(typeof XLSX==='undefined'){ alert('تعذّر تحميل مكتبة تصدير Excel — تأكد من اتصال الإنترنت وحاول مرة أخرى.'); return; }
@@ -2940,16 +2971,23 @@ function exportEntriesToExcel(){
   if(from) list = list.filter(e=>e.date>=from);
   if(to) list = list.filter(e=>e.date<=to);
   list.sort((a,b)=> (a.date+a.timeIn).localeCompare(b.date+b.timeIn));
-  const rows = [['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة','موقع الدخول','موقع الخروج','IP الدخول','IP الخروج','جهاز الدخول','جهاز الخروج']];
+  const showLocation = SESSION.role!=='supervisor';
+  const rows = [showLocation
+    ? ['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة','موقع الدخول','موقع الخروج','IP الدخول','IP الخروج','جهاز الدخول','جهاز الخروج']
+    : ['الموظف','الوظيفة','التاريخ','المشروع / الموقع','دخول','خروج','ساعات عادية','ساعات أوفر تايم','إجمالي الأجر','الحالة']];
   list.forEach(e=>{
     const emp = empById(e.employeeId);
     const h = computeEntryHours(e); const p = computeEntryPay(e);
-    rows.push([
-      emp?emp.name:'غير معروف', emp?emp.type:'', e.date, e.project||'', e.timeIn||'', e.timeOut||'', h.reg, h.ot, p.totalPay, e.timeOut?'مغلق':'جاري الآن',
-      e.locationIn? `${e.locationIn.lat}, ${e.locationIn.lng}` : '',
-      e.locationOut? `${e.locationOut.lat}, ${e.locationOut.lng}` : '',
-      e.ipIn||'', e.ipOut||'', e.deviceIn||'', e.deviceOut||''
-    ]);
+    const baseRow = [emp?emp.name:'غير معروف', emp?emp.type:'', e.date, e.project||'', e.timeIn||'', e.timeOut||'', h.reg, h.ot, p.totalPay, e.timeOut?'مغلق':'جاري الآن'];
+    if(showLocation){
+      rows.push([...baseRow,
+        e.locationIn? `${e.locationIn.lat}, ${e.locationIn.lng}` : '',
+        e.locationOut? `${e.locationOut.lat}, ${e.locationOut.lng}` : '',
+        e.ipIn||'', e.ipOut||'', e.deviceIn||'', e.deviceOut||''
+      ]);
+    }else{
+      rows.push(baseRow);
+    }
   });
   if(rows.length===1){ alert('لا توجد سجلات لتصديرها بهذه الفلاتر'); return; }
   const wb = XLSX.utils.book_new();
@@ -3243,6 +3281,8 @@ function renderFinancialTab(){
         <div class="f-field"><label>إلى تاريخ</label><input type="date" id="monthly_to" value="${period.to}"></div>
         <button class="btn-sm btn-go" onclick="loadMonthlyAllowancesTable()">عرض</button>
         <button class="btn-sm btn-teal" onclick="printMonthlyAllowancesReportPdfFromInputs()">🖨️ تحويل PDF</button>
+        <button class="btn-sm btn-teal" onclick="printAllEmployeesDetailedFinancialPdfFromInputs()">📄 تفاصيل كل موظف (ورقة لكل موظف)</button>
+        <button class="btn-sm btn-teal" onclick="exportTimesheetTemplateExcelFromInputs()">📊 Excel TIMESHEET (بأكواد الموظفين)</button>
       </div>
       <div class="panel-body table-wrap" id="monthlyAllowancesWrap"></div>
     </div>
@@ -3359,6 +3399,77 @@ function exportFinancialToExcel(employeeId, from, to){
 
   const safeName = (emp.name||'employee').replace(/[\\/:*?"<>|]/g,'_');
   XLSX.writeFile(wb, `تقرير_مالي_${safeName}_${from}_${to}.xlsx`);
+}
+
+function exportTimesheetTemplateExcelFromInputs(){
+  const from = document.getElementById('monthly_from').value;
+  const to = document.getElementById('monthly_to').value;
+  if(!from || !to){ alert('من فضلك اختر تاريخ البداية وتاريخ النهاية'); return; }
+  exportTimesheetTemplateExcel(from, to);
+}
+
+// Counts distinct work days per location group (المقطم/المطار/التجمع/أكتوبر) for an employee within a period,
+// based on which keyword each day's project/location text contains.
+function countWorkDaysByLocation(employeeId, from, to){
+  const groups = DATA.settings.locationGroups || [];
+  const sets = {}; groups.forEach(g=> sets[g] = new Set());
+  DATA.entries.filter(e=>e.employeeId===employeeId && e.date>=from && e.date<=to).forEach(e=>{
+    const proj = e.project || '';
+    groups.forEach(g=>{ if(proj.includes(g)) sets[g].add(e.date); });
+  });
+  const res = {}; groups.forEach(g=> res[g] = sets[g].size);
+  return res;
+}
+
+function exportTimesheetTemplateExcel(from, to){
+  if(typeof XLSX==='undefined'){ alert('تعذّر تحميل مكتبة تصدير Excel — تأكد من اتصال الإنترنت وحاول مرة أخرى.'); return; }
+  const employees = DATA.employees.filter(e=>e.active);
+  if(!employees.length){ alert('لا يوجد موظفون نشطون'); return; }
+
+  const header = ['Empl. ID','Employee Name','Mokatm Work Days','Airport Work Days','Tegamaa Work Days','October Work Days','OT Hours','Mth Eval','Transport','Overtime','Total'];
+  const aoa = [
+    ['TIMESHEET — IFT Corporation'],
+    ['الفترة من ' + from + ' إلى ' + to],
+    [],
+    header
+  ];
+
+  let sumEval=0, sumTransport=0, sumOt=0, sumTotal=0;
+  employees.forEach(emp=>{
+    const f = computePeriodFinancials(emp.id, from, to);
+    const wd = countWorkDaysByLocation(emp.id, from, to);
+    const mthEval = f.incentiveTotal;
+    const transport = f.transportTotal;
+    const overtime = f.otPay;
+    const total = mthEval + transport + overtime;
+    sumEval += mthEval; sumTransport += transport; sumOt += overtime; sumTotal += total;
+    aoa.push([
+      emp.empCode || emp.id,
+      emp.name,
+      wd['المقطم']||0,
+      wd['المطار']||0,
+      wd['التجمع']||0,
+      wd['أكتوبر']||0,
+      Math.round((f.otHours||0)*100)/100,
+      Math.round(mthEval*100)/100,
+      Math.round(transport*100)/100,
+      Math.round(overtime*100)/100,
+      Math.round(total*100)/100
+    ]);
+  });
+
+  aoa.push([]);
+  aoa.push(['', '', '', '', '', '', '', Math.round(sumEval*100)/100, Math.round(sumTransport*100)/100, Math.round(sumOt*100)/100, Math.round(sumTotal*100)/100]);
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:10},{wch:24},{wch:14},{wch:14},{wch:14},{wch:14},{wch:11},{wch:14},{wch:14},{wch:14},{wch:14}];
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:header.length-1}},
+    {s:{r:1,c:0}, e:{r:1,c:header.length-1}}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'TIMESHEET');
+  XLSX.writeFile(wb, `TIMESHEET_${from}_${to}.xlsx`);
 }
 
 function computeAnnualBonusMonths(avg){
@@ -3564,7 +3675,7 @@ function printMonthlyAllowancesReportPdf(from, to){
       th{background:#003A72;color:#fff;font-size:13px;}
       tbody tr:nth-child(even) td{background:#F7F9FB;}
       .mono{font-family:'Cairo',Tahoma,monospace;}
-      .name-cell{display:flex;align-items:center;gap:10px;font-weight:700;}
+      .name-cell{display:flex;align-items:center;gap:10px;font-weight:700;width:1%;white-space:nowrap;}
       .ph{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;}
       .ph-initial{display:flex;align-items:center;justify-content:center;background:#003A72;color:#fff;font-weight:800;}
       .tot{font-weight:800;color:#003A72;}
@@ -3589,6 +3700,92 @@ function printMonthlyAllowancesReportPdf(from, to){
   win.focus();
   setTimeout(()=>{ try{ win.print(); }catch(e){} }, 500);
 }
+function printAllEmployeesDetailedFinancialPdfFromInputs(){
+  const from = document.getElementById('monthly_from').value;
+  const to = document.getElementById('monthly_to').value;
+  if(!from || !to){ alert('من فضلك اختر تاريخ البداية وتاريخ النهاية'); return; }
+  printAllEmployeesDetailedFinancialPdf(from, to);
+}
+
+function printAllEmployeesDetailedFinancialPdf(from, to){
+  const employees = DATA.employees.filter(e=>e.active).slice().sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  if(!employees.length){ alert('لا يوجد موظفون نشطون'); return; }
+  const win = window.open('', '_blank');
+  if(!win){ alert('المتصفح منع فتح نافذة الطباعة — من فضلك اسمح بالنوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى'); return; }
+
+  const pages = employees.map((emp, idx)=>{
+    const f = computePeriodFinancials(emp.id, from, to);
+    const rowsEval = f.evalMonths.map(m=>`<tr><td>${m.month}</td><td>${m.score!==null?fmtHrs(m.score):'لم يتم التقييم'}</td><td>${fmtHrs(m.percent)}%</td><td>${fmtMoney(m.value)}</td></tr>`).join('');
+    const rowsExtra = [
+      ...f.transportDays.map(t=>`<tr><td>${t.date}${t.timeIn?` (${t.timeIn}-${t.timeOut||''})`:''}</td><td>بدل انتقال</td><td>${escapeHtml(t.project)}</td><td>${fmtMoney(t.amount)}</td></tr>`),
+      ...f.holidayDays.map(h=>`<tr><td>${h.date}</td><td>عمل في إجازة رسمية</td><td>${escapeHtml(h.name)}</td><td>${fmtMoney(DATA.settings.holidayBonus)}</td></tr>`),
+      ...f.flatPayDays.map(fp=>`<tr><td>${fp.date}</td><td>يوم أجر ثابت</td><td>${escapeHtml(fp.label)}</td><td>${fmtMoney(fp.amount)}</td></tr>`)
+    ].join('') || `<tr><td colspan="4">لا توجد بيانات في هذه الفترة</td></tr>`;
+    const isLast = idx === employees.length - 1;
+    return `
+    <section class="emp-page${isLast?'':' brk'}">
+      <div class="head">
+        <img src="data:image/png;base64,${LOGO_SMALL_B64}">
+        <div><h1>IFT Corporation — تقرير المستحقات المالية</h1><div class="sub">الفترة من ${from} إلى ${to}</div></div>
+      </div>
+      <div class="emp-row">
+        ${emp.photo? `<img class="emp-photo" src="${emp.photo}">` : `<div class="emp-photo-initial">${escapeHtml((emp.name||'?').trim().charAt(0)||'?')}</div>`}
+        <div class="meta"><div>الموظف: <b>${escapeHtml(emp.name)}</b></div><div>الوظيفة: <b>${escapeHtml(emp.type)}</b></div><div>الهاتف: <b>${escapeHtml(emp.phone||'-')}</b></div></div>
+      </div>
+      <h2>الملخص المالي</h2>
+      <table>
+        <tr><th>البند</th><th>القيمة (جنيه)</th></tr>
+        <tr><td>أجر الساعات العادية (${fmtHrs(f.regHours)} ساعة)</td><td>${fmtMoney(f.regPay - f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</td></tr>
+        <tr><td>أجر أيام الجمعة/الخميس الليلي الثابت (${f.flatPayDays.length} يوم)</td><td>${fmtMoney(f.flatPayDays.reduce((s,x)=>s+x.amount,0))}</td></tr>
+        <tr><td>قيمة الأوفر تايم (${fmtHrs(f.otHours)} ساعة × ${fmtMoney(DATA.settings.otHourlyRate)})</td><td>${fmtMoney(f.otPay)}</td></tr>
+        <tr><td>بدل الانتقال (${f.transportDays.length} رحلة)</td><td>${fmtMoney(f.transportTotal)}</td></tr>
+        <tr><td>مستحقات العمل في الإجازات (${f.holidayDays.length} يوم)</td><td>${fmtMoney(f.holidayTotal)}</td></tr>
+        <tr><td>قيمة الحافز الشهري</td><td>${fmtMoney(f.incentiveTotal)}</td></tr>
+      </table>
+      <h2>التقييم الشهري والحافز</h2>
+      <table><tr><th>الشهر</th><th>التقييم</th><th>نسبة الحافز</th><th>القيمة</th></tr>${rowsEval || '<tr><td colspan="4">لا توجد أشهر ضمن الفترة</td></tr>'}</table>
+      <h2>تفاصيل بدل الانتقال والإجازات وأيام الأجر الثابت</h2>
+      <table><tr><th>التاريخ</th><th>النوع</th><th>التفاصيل</th><th>القيمة</th></tr>${rowsExtra}</table>
+      <div class="total"><div class="num">${fmtMoney(f.grandTotal)} جنيه</div><div>الإجمالي النهائي المستحق</div></div>
+      <div class="footer">IFT Corporation — تم إصدار هذا التقرير تلقائيًا من نظام الحضور والانصراف</div>
+    </section>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+    <title>تفاصيل مستحقات الموظفين — ${from} إلى ${to}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+      @page { size: portrait; margin: 12mm; }
+      *{box-sizing:border-box;} body{font-family:'Cairo',Tahoma,Arial,sans-serif;color:#0B2A4A;margin:0;padding:0;}
+      .emp-page{padding:16px;}
+      .emp-page.brk{page-break-after:always;}
+      .head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #003A72;padding-bottom:14px;margin-bottom:18px;}
+      .head img{width:56px;height:56px;border-radius:50%;}
+      .head h1{font-size:18px;margin:0;color:#003A72;}
+      .head .sub{font-size:12px;color:#5C6F84;margin-top:2px;}
+      .emp-row{display:flex;align-items:center;gap:14px;margin-bottom:16px;background:#F4F7FA;border-radius:10px;padding:12px 16px;}
+      .emp-photo{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none;border:2px solid #003A72;}
+      .emp-photo-initial{width:52px;height:52px;border-radius:50%;flex:none;background:#003A72;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;}
+      .meta{display:flex;gap:24px;flex-wrap:wrap;font-size:13px;}
+      .meta b{color:#003A72;}
+      h2{font-size:14px;color:#003A72;border-bottom:1px solid #DCE2E8;padding-bottom:6px;margin-top:22px;}
+      table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+      th,td{padding:7px 8px;border:1px solid #E3E7EC;text-align:right;}
+      th{background:#EEF2F6;}
+      .total{background:#003A72;color:#fff;border-radius:10px;padding:16px;text-align:center;margin-top:20px;}
+      .total .num{font-size:26px;font-weight:800;color:#6FBD44;}
+      .footer{margin-top:26px;font-size:11px;color:#8A97A6;text-align:center;}
+      @media print{ .emp-page{padding:6px;} }
+    </style></head><body>
+    ${pages}
+  </body></html>`;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ try{ win.print(); }catch(e){} }, 500);
+}
+
 function renderClockTab(){
   const emp = empById(SESSION.employeeId);
   const open = openEntryFor(emp.id);
